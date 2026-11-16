@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a2f4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Marea Goro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Carta nautica della laguna: blu profondo del mare, sabbia degli scanni, numeri condensati da tabella di marea.
+   Layout: fascia-intestazione con onda, grafico in testa a tutta larghezza, poi schede in griglia. */
+:root{
+  --bg:#eef0e9; --card:#fbfaf5; --fg:#0f2535; --muted:#5b6e78; --line:#d9dbd0;
+  --sea:#0b5d8a; --sea-deep:#0a2f4a; --sea-soft:#0b5d8a2e; --sand:#d9a548; --sand-soft:#d9a54826;
+  --fc:#d4621c; --fc-old:#d4621c55; --warn:#e0a800; --crit:#bf2f26; --ok:#2f7d5a; --now:#0f2535;
+  --font:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#07151f; --card:#0e2130; --fg:#e8eef1; --muted:#8ea4b1; --line:#1e3444;
+    --sea:#55b2ea; --sea-deep:#051320; --sea-soft:#55b2ea2e; --sand:#e2b55e; --sand-soft:#e2b55e22;
+    --fc:#f29550; --fc-old:#f2955055; --now:#e8eef1; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-variant-numeric:tabular-nums}
+body{padding-block:0 36px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--sea-deep);z-index:10}
+header{position:relative;margin:0 -12px 14px;padding:calc(14px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-left,0px)) 30px;background:var(--sea-deep);color:#fff;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:18px;background:var(--bg);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 18' preserveAspectRatio='none'%3E%3Cpath d='M0 10 C 15 0, 30 0, 45 10 S 75 20, 90 10 S 110 0, 120 10 V18 H0Z'/%3E%3C/svg%3E") repeat-x bottom/120px 18px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 18' preserveAspectRatio='none'%3E%3Cpath d='M0 10 C 15 0, 30 0, 45 10 S 75 20, 90 10 S 110 0, 120 10 V18 H0Z'/%3E%3C/svg%3E") repeat-x bottom/120px 18px}
+h1{font-family:var(--display);font-size:1.9rem;margin:0;font-weight:700;letter-spacing:.5px;line-height:1;text-transform:uppercase}
+h1 span{color:var(--sand)}
+.sub{font-size:.8rem;color:#cfdce6;margin-top:4px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:8px 12px;cursor:pointer}
+header button{background:#ffffff14;border-color:#ffffff40;color:#fff}
+button:focus-visible{outline:2px solid var(--sand)}
+.hero{background:var(--card);border-radius:16px;padding:14px 10px 8px;border:1px solid var(--line);box-shadow:0 8px 24px -18px #0a2f4a66}
+.kpi{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:0 6px 8px}
+.kpi .big{font-family:var(--display);font-size:3.4rem;font-weight:700;line-height:.95;color:var(--sea);letter-spacing:-.5px}
+.kpi .big small{font-family:var(--font);font-size:.95rem;font-weight:500;color:var(--muted);letter-spacing:0}
+.kpi .trend{font-size:.9rem;color:var(--muted);flex-basis:100%}
+.kpi .next{margin-left:auto;text-align:right;font-size:.85rem;color:var(--muted);line-height:1.35}
+.kpi .next b{font-family:var(--display);color:var(--fg);font-size:1.25rem;font-weight:600}
+svg.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;color:var(--muted);padding:6px 4px 0}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px;border-radius:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.card.wide{grid-column:1/-1}
+.card h2{font-family:var(--display);font-size:.95rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 10px;font-weight:600;padding-bottom:6px;border-bottom:2px solid var(--sand-soft);position:relative}
+.card h2::after{content:"";position:absolute;left:0;bottom:-2px;width:34px;height:2px;background:var(--sand)}
+.card .v{font-family:var(--display);font-size:2rem;font-weight:700;line-height:1}
+.card .v small{font-family:var(--font);font-size:.85rem;color:var(--muted);font-weight:500}
+.card .d{font-size:.8rem;color:var(--muted);margin-top:4px}
+.card.half{grid-column:span 2}
+@media (max-width:560px){.card.half{grid-column:1/-1}}
+table.t{width:100%;border-collapse:collapse;font-size:.92rem}
+table.t th{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;text-align:right;padding:0 0 6px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left;padding-left:0}
+table.t td{padding:7px 0 7px 14px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-weight:600}
+table.t td:first-child{font-weight:500;width:100%}
+table.t tr:last-child td{border-bottom:0}
+table.t td .u{color:var(--muted);font-weight:500;font-size:.8rem;margin-left:2px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:.9rem}
+.row:first-of-type{border-top:0}
+.row b{font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:600;color:#fff;background:var(--muted)}
+.pill.green{background:var(--ok)} .pill.yellow{background:var(--warn);color:#222} .pill.orange{background:#e07b00} .pill.red{background:var(--crit)}
+.extrema{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.ex{border:1px solid var(--line);border-radius:10px;padding:8px 10px 8px 12px;position:relative;overflow:hidden}
+.ex::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--sand)}
+.ex.alta::before{background:var(--sea)}
+.ex .t{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.ex.alta .t{color:var(--sea)} .ex.bassa .t{color:var(--sand)}
+.ex .h{font-family:var(--display);font-size:1.6rem;font-weight:700;line-height:1.05}
+.ex .w{font-size:.85rem;color:var(--muted)}
+.astro .day h3{font-family:var(--display);font-size:1rem;letter-spacing:.3px}
+.astro .e .k{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.astro .e.alta .k{color:var(--sea)} .astro .e.bassa .k{color:var(--sand)}
+.astro .e b{font-family:var(--display);font-size:1.05rem}
+table.t td{font-family:var(--display);font-size:1.1rem}
+table.t td:first-child{font-family:var(--font);font-size:.92rem}
+.astro{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.astro .day{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.astro .day h3{margin:0 0 4px;font-size:.8rem;font-weight:700;text-transform:capitalize}
+.astro .day.today{border-color:var(--sea);box-shadow:inset 0 0 0 1px var(--sea)}
+.astro .e{display:flex;justify-content:space-between;font-size:.85rem;padding:2px 0}
+.astro .e .k{color:var(--muted);width:3.2em}
+.astro .e.alta .k{color:var(--sea)}
+.astro .e b{font-weight:600}
+.astro .e span:last-child{color:var(--muted)}
+input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:7px 10px}
+.note{font-size:.75rem;color:var(--muted);margin-top:14px;line-height:1.45;padding:0 4px}
+.err{background:#c8332b22;border:1px solid #c8332b66;color:var(--fg);padding:8px 10px;border-radius:10px;font-size:.85rem;margin-top:10px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Marea <span>Goro</span></h1>
+    <div class="sub" id="status">Carico i dati…</div>
+  </div>
+  <button id="refresh" aria-label="Aggiorna">↻ Aggiorna</button>
+</header>
+
+<section class="hero" aria-label="Grafico marea Porto Garibaldi">
+  <div class="kpi">
+    <div class="big" id="levelNow">–<small> m</small></div>
+    <div class="trend" id="trend"></div>
+    <div class="next" id="nextExt"></div>
+  </div>
+  <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Livello del mare osservato e previsto"></svg>
+  <div class="legend">
+    <span><i style="border-color:var(--sea)"></i>Osservato Porto Garibaldi</span>
+    <span><i style="border-color:var(--sea);border-top-style:dashed"></i>Stima fino ad adesso</span>
+    <span><i style="border-color:var(--fc);border-top-style:dashed"></i>Previsione Adriac corretta con le letture</span>
+    <span><i style="border-color:var(--fc);border-top-style:dotted;opacity:.6"></i>Adriac grezza</span>
+    <span><i style="border-color:var(--fc-old);border-top-style:dotted"></i>Emissione precedente</span>
+    <span><i style="border-color:var(--muted);border-top-style:dotted"></i>Astronomica</span>
+    <span><i style="border-color:var(--warn)"></i>0,70 m</span>
+    <span><i style="border-color:var(--crit)"></i>0,80 m</span>
+  </div>
+</section>
+
+<div id="error" class="err" hidden></div>
+
+<section class="grid" id="stats">
+  <div class="card wide">
+    <h2>Prossime alte e basse previste (Adriac corretta, Porto Garibaldi)</h2>
+    <div class="extrema" id="extrema"></div>
+    <div class="d" id="saccaNote">Dentro la Sacca gli orari arrivano in ritardo rispetto al mare aperto: considera uno scarto di decine di minuti a seconda della zona.</div>
+  </div>
+
+  <div class="card wide">
+    <h2>Marea astronomica · calendario</h2>
+    <div class="ctl" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <input type="date" id="astroDate" aria-label="Giorno di partenza">
+      <button type="button" id="astroToday">Oggi</button>
+      <button type="button" id="astroPrev" aria-label="Settimana precedente">‹ 7 g</button>
+      <button type="button" id="astroNext" aria-label="Settimana successiva">7 g ›</button>
+    </div>
+    <div id="astroCal" class="astro"></div>
+    <div class="d">Solo luna e sole, calcolata dalle costanti armoniche di Porto Garibaldi (un anno di dati Arpae). Il livello reale si scosta anche di decine di cm con scirocco, bora o bassa pressione: per il giorno dopo guarda la previsione Adriac nel grafico.</div>
+  </div>
+
+  <div class="card">
+    <h2>Scostamento meteo</h2>
+    <div class="v" id="surge">–</div>
+    <div class="d" id="surgeAstro"></div>
+    <div class="d">Osservato meno previsione Adriac allo stesso istante. Positivo = vento o pressione stanno alzando il mare.</div>
+    <div class="d" id="surgeCorr"></div>
+  </div>
+
+  <div class="card">
+    <h2>Ultime 24 ore osservate</h2>
+    <div class="v" id="obsMax">–</div>
+    <div class="d" id="obsMin"></div>
+  </div>
+
+  <div class="card">
+    <h2>Massimo previsto 48 h</h2>
+    <div class="v" id="fcMax">–</div>
+    <div class="d" id="fcMaxWhen"></div>
+  </div>
+
+  <div class="card">
+    <h2>Minimo previsto 48 h</h2>
+    <div class="v" id="fcMin">–</div>
+    <div class="d" id="fcMinWhen"></div>
+  </div>
+
+  <div class="card wide">
+    <h2>Allerta protezione civile · costa ferrarese (zona D2)</h2>
+    <div id="alert"></div>
+  </div>
+
+  <div class="card half">
+    <h2>Mareografi costa (sensore a pressione)</h2>
+    <div id="others"></div>
+  </div>
+
+  <div class="card half">
+    <h2>Acqua nella Sacca di Goro</h2>
+    <div id="sacca"></div>
+  </div>
+
+
+</section>
+
+<p class="note">
+Fonti: Arpae Emilia-Romagna (mareografo Porto Garibaldi, modello Adriac, stazioni Daphne) e Agenzia regionale per la sicurezza territoriale e la protezione civile. Livelli riferiti allo zero Arpae (RGC2023). Orari in ora italiana. Il Faro di Goro non ha un feed pubblico: Porto Garibaldi è il riferimento più vicino. Il mareografo misura ogni 10 minuti ma Arpae pubblica ogni lettura con circa 20 minuti di ritardo: il dato "attuale" ha sempre 20–30 minuti.
+</p>
+
+<script>
+(function(){
+'use strict';
+const A = 'https://apps.arpae.it/REST/';
+const AM = 'https://allertameteo.regione.emilia-romagna.it/';
+const ST_PG = '14387', ST_PG2 = '14422';
+const TZ = 'Europe/Rome';
+const $ = id => document.getElementById(id);
+
+const fmtT = d => new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:TZ}).format(d);
+const fmtD = d => new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',timeZone:TZ}).format(d);
+const fmtDT = d => fmtD(d)+' '+fmtT(d);
+const m = v => (v==null||isNaN(v)) ? '–' : (v>=0?'+':'−')+Math.abs(v).toFixed(2).replace('.',',');
+const cm = v => (v==null||isNaN(v)) ? '–' : (v>=0?'+':'−')+Math.round(Math.abs(v)*100);
+
+async function getJSON(url, ms=15000){
+  const c = new AbortController(); const t = setTimeout(()=>c.abort(), ms);
+  try{ const r = await fetch(url,{signal:c.signal}); if(!r.ok) throw new Error(r.status+' '+url); return await r.json(); }
+  finally{ clearTimeout(t); }
+}
+const eveWhere = o => encodeURIComponent(JSON.stringify(o));
+
+/* ---------- fetchers ---------- */
+async function fetchObs(hoursBack=30){
+  const since = new Date(Date.now()-hoursBack*3600e3).toUTCString();
+  const q = eveWhere({station_id:ST_PG, reftime:{$gte:since}});
+  let j = await getJSON(`${A}meteo_opendata_stazioni_livello_del_mare_istantaneo?where=${q}&sort=reftime&max_results=400`);
+  let items = j._items||[];
+  if(items.length<3){
+    const q2 = eveWhere({station_id:ST_PG2, reftime:{$gte:since}});
+    j = await getJSON(`${A}meteo_opendata_stazioni_livello_del_mare_istantaneo?where=${q2}&sort=reftime&max_results=400`);
+    items = j._items||[];
+  }
+  return items.filter(i=>i.value!=null).map(i=>({t:new Date(i.reftime).getTime(), v:i.value}));
+}
+async function fetchForecast(){
+  const j = await getJSON(`${A}meteo_mareogrammi?sort=-_id&max_results=1`);
+  const st = j._items[0].stazioni['Porto Garibaldi'];
+  const keys = Object.keys(st.previsioni).sort();
+  const conv = arr => arr.map(p=>({t:new Date(p[0]).getTime(), v:p[1]}));
+  return { latest: conv(st.previsioni[keys[keys.length-1]]), prev: keys.length>1?conv(st.previsioni[keys[keys.length-2]]):[], emission: new Date(keys[keys.length-1]), updated: j._items[0]._updated };
+}
+async function fetchAlert(){ return getJSON(`${AM}o/get-stato-allerta`); }
+async function fetchOthers(){
+  const slot = Math.floor(Date.now()/1800e3)*1800e3 - 1800e3;
+  const j = await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=254,0,0/101,-,-,-/B22037&time=${slot}`);
+  return {time:slot, rows:j.filter(x=>x.idstazione)};
+}
+async function fetchSacca(){
+  const ids = {'53145':'Bocca Scanno','53144':'Gorino','53143':'Punta Volano'};
+  const out = [];
+  await Promise.all(Object.keys(ids).map(async id=>{
+    try{
+      const s = await getJSON(`${A}meteo_marefe/${id}`);
+      const days = Object.keys(s.dati||{}).sort(); const d = days[days.length-1];
+      const hs = Object.keys(s.dati[d]).sort();
+      for(let k=hs.length-1;k>=0;k--){ const r = s.dati[d][hs[k]]; if(r.salinita_istantanea!=null||r.temperatura_acqua_mare!=null){ out.push({name:ids[id], when:d.slice(6,8)+'/'+d.slice(4,6)+' '+hs[k].slice(0,2)+':'+hs[k].slice(2), sal:r.salinita_istantanea, temp:r.temperatura_acqua_mare, ox:r.ossigeno_disciolto}); break; } }
+    }catch(e){}
+  }));
+  return out.sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+/* ---------- marea astronomica ----------
+   Costanti armoniche di Porto Garibaldi (Arpae 14387) stimate il 16/11/2026 ai minimi quadratici
+   su tre anni di livelli orari (01/01/2024 – 16/11/2026, 24.949 ore, tutte sullo zero RGC2023), con correzioni nodali.
+   Residuo 0,136 m RMS. Fase riferita a T0 = 2026-01-01 00:00 UTC: h = Z0 + Σ f·A·cos(ω·τ + u − φ). */
+const ASTRO = {
+  T0: Date.UTC(2026,0,1), Z0: 0.104,
+  cons: [ // nome, velocità (°/h), gruppo nodale, ampiezza (m), fase (°)
+    ['M2',28.9841042,'M2',0.1809,-155.9],['K1',15.0410686,'K1',0.1628,55.9],['S2',30.0,'S',0.1059,-83.1],
+    ['P1',14.9589314,'S',0.0563,74.3],['O1',13.9430356,'O1',0.0497,3.3],['Sa',0.0410686,'S',0.0348,-61.2],
+    ['K2',30.0821373,'K2',0.0316,70.4],['N2',28.4397295,'M2',0.0311,-154.1],['Mm',0.5443747,'Mm',0.0225,-96.1],
+    ['J1',15.5854433,'J1',0.0113,75.9],['Ssa',0.0821373,'S',0.0086,-172.4],['Q1',13.3986609,'O1',0.0083,21.8],
+    ['T2',29.9589333,'S',0.0058,-79.4],['NU2',28.5125831,'M2',0.0056,126.0],['OO1',16.1391017,'OO1',0.0050,-66.6],
+    ['MU2',27.9682084,'M2',0.0045,135.5],['L2',29.5284789,'M2',0.0043,16.3],['Mf',1.0980331,'Mf',0.0034,49.5],
+    ['2N2',27.8953548,'M2',0.0032,-150.2]
+  ]
+};
+const D2R = Math.PI/180;
+function nodal(t){
+  const d=(t-Date.UTC(2000,0,1,12))/86400e3; const N=((125.0445-0.0529539*d)%360)*D2R;
+  const c=Math.cos(N), c2=Math.cos(2*N), s=Math.sin(N), s2=Math.sin(2*N);
+  const fM2=1.0004-0.0373*c+0.0002*c2, uM2=(-2.14*s)*D2R;
+  return { S:[1,0], M2:[fM2,uM2],
+    K1:[1.006+0.115*c-0.0088*c2, (-8.86*s+0.68*s2)*D2R],
+    O1:[1.0089+0.1871*c-0.0147*c2, (10.8*s-1.34*s2)*D2R],
+    K2:[1.0241+0.2863*c+0.0083*c2, (-17.74*s+0.68*s2)*D2R],
+    J1:[1.0129+0.1676*c-0.0170*c2, (-12.94*s+1.34*s2)*D2R],
+    OO1:[1.1027+0.6504*c+0.0317*c2, (-36.68*s+4.02*s2)*D2R],
+    Mm:[1.0-0.1300*c+0.0013*c2, 0], Mf:[1.0429+0.4135*c-0.004*c2, (-23.74*s+2.68*s2)*D2R] };
+}
+function astro(t){
+  const nd=nodal(t), tau=(t-ASTRO.T0)/3600e3; let h=ASTRO.Z0;
+  for(const [,sp,g,A,phi] of ASTRO.cons){ const [f,u]=nd[g]; h+=f*A*Math.cos(sp*D2R*tau+u-phi*D2R); }
+  return h;
+}
+function astroSeries(t0,t1,stepMin=10){ const out=[]; for(let t=t0;t<=t1;t+=stepMin*60e3) out.push({t,v:astro(t)}); return out; }
+function astroExtrema(t0,t1){ return extrema(astroSeries(t0-3600e3,t1+3600e3,10), t0, 6, 0.05).filter(e=>e.t<=t1); }
+
+/* ---------- stima del livello attuale ----------
+   Dall'ultima lettura in poi si segue la forma della previsione Adriac (o, in mancanza, della marea astronomica),
+   agganciata ai dati reali: scostamento = media (osservato − curva) sulle ultime 3 letture. Ogni nuova lettura ricalibra. */
+function nowcast(obs, fc, now){
+  if(!obs.length) return null;
+  const last = obs[obs.length-1];
+  if(now-last.t > 2*3600e3) return null; // dato troppo vecchio per prolungarlo
+  const curve = t => { const v = fc.length ? interp(fc,t) : null; return v!=null ? v : astro(t); };
+  // scostamento all'ultima lettura, più metà della sua tendenza negli ultimi 30 min (estrapolata al massimo per 30 min)
+  const off = last.v - curve(last.t);
+  const prev = obs.find(p=>p.t>=last.t-30*60e3-60e3 && p.t<last.t);
+  const dOff = prev ? (off - (prev.v - curve(prev.t))) / ((last.t-prev.t)/60e3) : 0; // m per minuto
+  const offAt = t => off + 0.5*dOff*Math.min((t-last.t)/60e3, 30);
+  const est = t => curve(t) + offAt(t);
+  const series=[]; for(let t=last.t; t<=now; t+=5*60e3) series.push({t, v:est(t)}); series.push({t:now, v:est(now)});
+  return { v: est(now), off, series, last };
+}
+
+/* ---------- previsione corretta con le letture recenti ----------
+   L'errore di Adriac (sovralzo meteo non colto) lo misuro sulle ultime 6 ore (media pesata verso le letture
+   più recenti) e lo applico alle ore successive con decadimento esponenziale di 4 h: test a ritroso del 16/11
+   (32 ore di analisi, 14-15 nov, maltempo) → errore a +1 h da 16 a 6 cm, a +3 h da 15 a 12, oltre +6 h invariato.
+   Parte dal valore della stima "adesso" e in ~3 h si assesta sulla media delle 6 ore, per non avere scalini. */
+const CORR_TAU = 4*3600e3, CORR_BLEND = 3*3600e3, CORR_WIN = 6*3600e3;
+function correctedForecast(obs, fc, now, nc){
+  if(!fc.latest.length) return null;
+  const curve = t => { const v = interp(fc.latest,t); return v!=null ? v : interp(fc.prev,t); };
+  const win = obs.filter(p=>p.t>=now-CORR_WIN && p.t<=now && curve(p.t)!=null);
+  if(win.length<6) return null;
+  let s=0, sw=0; for(const p of win){ const w = 0.2 + (p.t-(now-CORR_WIN))/CORR_WIN; s+=w*(p.v-curve(p.t)); sw+=w; }
+  const offW = s/sw;
+  const c0 = curve(now);
+  const offNc = (nc && c0!=null) ? nc.v - c0 : offW;
+  const offAt = t => { const dt=t-now; if(dt<=0) return offNc; return (offNc + (offW-offNc)*(1-Math.exp(-dt/CORR_BLEND)))*Math.exp(-dt/CORR_TAU); };
+  const series = [];
+  if(c0!=null) series.push({t:now, v:c0+offNc});
+  for(const p of fc.latest) if(p.t>now) series.push({t:p.t, v:p.v+offAt(p.t)});
+  return { series, offW, offNow: offNc };
+}
+
+/* ---------- math ---------- */
+function interp(series, t){
+  if(!series.length) return null;
+  if(t<series[0].t||t>series[series.length-1].t) return null;
+  let lo=0, hi=series.length-1;
+  while(hi-lo>1){ const mid=(lo+hi)>>1; if(series[mid].t<=t) lo=mid; else hi=mid; }
+  const a=series[lo], b=series[hi]; if(b.t===a.t) return a.v;
+  return a.v+(b.v-a.v)*(t-a.t)/(b.t-a.t);
+}
+function extrema(series, fromT, win=3, MIN_AMP=0.08){
+  const out=[];
+  for(let i=win;i<series.length-win;i++){
+    if(series[i].t<fromT) continue;
+    let isMax=true,isMin=true;
+    for(let k=1;k<=win;k++){ if(series[i].v<series[i-k].v||series[i].v<series[i+k].v) isMax=false; if(series[i].v>series[i-k].v||series[i].v>series[i+k].v) isMin=false; }
+    if(isMax&&!isMin) out.push({type:'alta',...series[i]});
+    else if(isMin&&!isMax) out.push({type:'bassa',...series[i]});
+  }
+  // rimuovi doppioni consecutivi dello stesso tipo (plateau)
+  let ex = out.filter((e,i)=>i===0||e.type!==out[i-1].type);
+  // scarta le oscillazioni piccole: coppia di estremi consecutivi con dislivello < MIN_AMP
+  let changed = true;
+  while(changed && ex.length>2){
+    changed = false;
+    for(let i=0;i<ex.length-1;i++){
+      if(Math.abs(ex[i+1].v-ex[i].v)<MIN_AMP){ ex.splice(i,2); changed=true; break; }
+    }
+    ex = ex.filter((e,i)=>i===0||e.type!==ex[i-1].type);
+  }
+  return ex;
+}
+
+/* ---------- chart ---------- */
+function drawChart(obs, fc, fcPrev, ext, nc, cf){
+  const svg = $('chart');
+  const W = Math.max(320, Math.round(svg.getBoundingClientRect().width||720)), narrow = W<520;
+  const H = narrow?250:300, L=narrow?34:40, R=10, T=14, B=34;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const now = Date.now();
+  const t0 = now-24*3600e3, t1 = now+48*3600e3;
+  const all = [...obs,...fc].filter(p=>p.t>=t0&&p.t<=t1).map(p=>p.v);
+  let yMin = Math.min(-0.5,...all)-0.05, yMax = Math.max(0.9,...all)+0.05;
+  const x = t => L+(t-t0)/(t1-t0)*(W-L-R);
+  const y = v => T+(yMax-v)/(yMax-yMin)*(H-T-B);
+  const path = s => { let d=''; let pen=false; for(const p of s){ if(p.t<t0||p.t>t1){pen=false;continue;} d+=(pen?'L':'M')+x(p.t).toFixed(1)+' '+y(p.v).toFixed(1); pen=true; } return d; };
+  let g = '';
+  // fasce soglie
+  g += `<rect x="${L}" y="${y(0.8)}" width="${W-L-R}" height="${Math.max(0,y(0.7)-y(0.8))}" fill="var(--warn)" opacity=".15"/>`;
+  g += `<rect x="${L}" y="${y(yMax)}" width="${W-L-R}" height="${Math.max(0,y(0.8)-y(yMax))}" fill="var(--crit)" opacity=".12"/>`;
+  // griglia y
+  const step = (yMax-yMin)>1.6?0.5:0.25;
+  for(let v=Math.ceil(yMin/step)*step; v<=yMax+1e-9; v+=step){
+    const yy=y(v); g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="${Math.abs(v)<1e-9?1.5:0.7}"/>`;
+    g+=`<text x="${L-6}" y="${yy+4}" font-size="11" text-anchor="end" fill="var(--muted)">${v.toFixed(2).replace('.',',')}</text>`;
+  }
+  // griglia x: mezzanotte e mezzogiorno
+  const d = new Date(t0); d.setMinutes(0,0,0);
+  for(let t=d.getTime(); t<=t1; t+=3600e3){
+    const dt=new Date(t); const hh=parseInt(new Intl.DateTimeFormat('it-IT',{hour:'2-digit',hour12:false,timeZone:TZ}).format(dt),10);
+    if(hh%(narrow?12:6)!==0) continue;
+    const xx=x(t); const mid=hh===0;
+    g+=`<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}" stroke="var(--line)" stroke-width="${mid?1.5:0.6}" ${mid?'':'stroke-dasharray="2 3"'}/>`;
+    g+=`<text x="${xx}" y="${H-B+14}" font-size="11" text-anchor="middle" fill="var(--muted)">${String(hh).padStart(2,'0')}</text>`;
+    if(mid) g+=`<text x="${xx+3}" y="${H-B+28}" font-size="11" fill="var(--fg)" font-weight="600">${fmtD(dt)}</text>`;
+  }
+  // soglie
+  g+=`<line x1="${L}" x2="${W-R}" y1="${y(0.7)}" y2="${y(0.7)}" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+  g+=`<line x1="${L}" x2="${W-R}" y1="${y(0.8)}" y2="${y(0.8)}" stroke="var(--crit)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+  // serie
+  g+=`<path d="${path(astroSeries(t0,t1,20))}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="1 3" opacity=".9"/>`;
+  if(fcPrev.length) g+=`<path d="${path(fcPrev)}" fill="none" stroke="var(--fc-old)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+  if(fc.length){
+    const fcFut = fc.filter(p=>p.t>=now-20*60e3);
+    if(cf && cf.series.length>2){
+      g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="2 3" opacity=".55"/>`;
+      g+=`<path d="${path(cf.series)}" fill="none" stroke="var(--fc)" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+    } else {
+      g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+    }
+    const fcPast = fc.filter(p=>p.t<=now);
+    if(fcPast.length>1) g+=`<path d="${path(fcPast)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="3 3" opacity=".6"/>`;
+  }
+  if(obs.length){
+    const area = path(obs)+` L${x(Math.min(obs[obs.length-1].t,t1)).toFixed(1)} ${y(yMin)} L${x(Math.max(obs[0].t,t0)).toFixed(1)} ${y(yMin)} Z`;
+    g=`<defs><linearGradient id="seaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sea)" stop-opacity=".35"/><stop offset="1" stop-color="var(--sea)" stop-opacity=".04"/></linearGradient></defs>`+g;
+    g+=`<path d="${area}" fill="url(#seaFill)"/>`;
+    g+=`<path d="${path(obs)}" fill="none" stroke="var(--sea)" stroke-width="2.4" stroke-linejoin="round"/>`;
+    const last=obs[obs.length-1]; g+=`<circle cx="${x(last.t)}" cy="${y(last.v)}" r="3.5" fill="var(--sea)" stroke="var(--card)" stroke-width="1.5"/>`;
+  }
+  if(nc){ // stima dall'ultima lettura ad adesso: solo il tratteggio, il valore è nel numero grande
+    g+=`<path d="${path(nc.series)}" fill="none" stroke="var(--sea)" stroke-width="2.2" stroke-dasharray="3 3" stroke-linecap="round"/>`;
+  }
+  // adesso
+  g+=`<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H-B}" stroke="var(--now)" stroke-width="1.2"/>`;
+  g+=`<text x="${x(now)+4}" y="${T+10}" font-size="11" fill="var(--now)" font-weight="600">adesso ${fmtT(new Date(now))}</text>`;
+  // estremi
+  for(const e of ext.slice(0,5)){
+    if(e.t>t1) continue;
+    const xx=x(e.t), yy=y(e.v); const up=e.type==='alta';
+    g+=`<circle cx="${xx}" cy="${yy}" r="3.5" fill="var(--card)" stroke="var(--fc)" stroke-width="2"/>`;
+    g+=`<text x="${xx}" y="${up?yy-9:yy+17}" font-size="11" text-anchor="middle" fill="var(--fg)" font-weight="600">${fmtT(new Date(e.t))}</text>`;
+  }
+  svg.innerHTML = g;
+}
+
+/* ---------- render ---------- */
+function render(data){
+  const {obs, fc, alert, others, sacca} = data;
+  const now = Date.now();
+  const last = obs.length?obs[obs.length-1]:null;
+  const nc = nowcast(obs, fc.latest, now);
+  const cf = correctedForecast(obs, fc, now, nc);
+  // per alte/basse future uso la previsione corretta (se c'è), unita al tratto passato di Adriac per gli estremi vicini ad adesso
+  const fcUse = cf ? fc.latest.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : fc.latest;
+  const ext = extrema(fcUse, now-3600e3);
+  drawChart(obs, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf);
+
+  if(last){
+    const ago = Math.round((now-last.t)/60e3);
+    const prev = obs.find(p=>p.t>=last.t-30*60e3-60e3);
+    const dv = prev?last.v-prev.v:null;
+    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
+    if(nc){
+      $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">stima ${fmtT(new Date(now))}</em></small>`;
+      $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · ultima lettura Arpae ${m(last.v)} m alle ${fmtT(new Date(last.t))} (${ago} min fa)`;
+      $('trend').title = 'Stima: ultima lettura prolungata con l\'andamento della previsione; si ricalibra a ogni nuova lettura. Arpae pubblica con circa 20 minuti di ritardo.';
+    } else {
+      $('levelNow').innerHTML = `${m(last.v)}<small> m</small>`;
+      $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · lettura delle ${fmtT(new Date(last.t))} (${ago} min fa)`;
+      $('trend').title = 'Arpae pubblica ogni lettura con circa 20 minuti di ritardo.';
+    }
+  }
+  const nx = ext.filter(e=>e.t>now).slice(0,2);
+  $('nextExt').innerHTML = nx.map(e=>`${e.type==='alta'?'Alta':'Bassa'} <b>${fmtT(new Date(e.t))}</b> ${m(e.v)} m`).join('<br>');
+
+  $('extrema').innerHTML = ext.filter(e=>e.t>now).slice(0,6).map(e=>`<div class="ex ${e.type}"><div class="t">${e.type==='alta'?'▲ alta':'▼ bassa'}</div><div class="h">${fmtT(new Date(e.t))}</div><div class="w">${fmtD(new Date(e.t))} · ${m(e.v)} m</div></div>`).join('') || '<div class="d">Nessun estremo nelle prossime 48 h.</div>';
+
+  // scostamento
+  if(last){
+    const f = interp(fc.latest,last.t) ?? interp(fc.prev,last.t);
+    if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit'; }
+    $('surgeAstro').textContent = `Rispetto alla marea astronomica: ${cm(last.v-astro(last.t))} cm`;
+  }
+  // 24h osservato
+  const o24 = obs.filter(p=>p.t>=now-24*3600e3);
+  if(o24.length){
+    const mx=o24.reduce((a,b)=>b.v>a.v?b:a), mn=o24.reduce((a,b)=>b.v<a.v?b:a);
+    $('obsMax').innerHTML = `${m(mx.v)}<small> m alle ${fmtT(new Date(mx.t))}</small>`;
+    $('obsMin').textContent = `Minimo ${m(mn.v)} m alle ${fmtT(new Date(mn.t))}`;
+  }
+  // correzione applicata
+  $('surgeCorr').textContent = cf ? `Correzione applicata alla previsione: ${cm(cf.offW)} cm (media ultime 6 h), si esaurisce nelle prossime ${Math.round(CORR_TAU/3600e3*2)} ore.` : 'Correzione non applicata: poche letture recenti.';
+  // previsione 48h (corretta)
+  const f48 = fcUse.filter(p=>p.t>=now&&p.t<=now+48*3600e3);
+  if(f48.length){
+    const mx=f48.reduce((a,b)=>b.v>a.v?b:a), mn=f48.reduce((a,b)=>b.v<a.v?b:a);
+    $('fcMax').innerHTML = `${m(mx.v)}<small> m</small>`; $('fcMax').style.color = mx.v>=0.8?'var(--crit)':mx.v>=0.7?'var(--warn)':'inherit';
+    $('fcMaxWhen').textContent = fmtDT(new Date(mx.t))+` · emissione ${fmtD(fc.emission)}`;
+    $('fcMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('fcMinWhen').textContent = fmtDT(new Date(mn.t));
+  }
+  // allerta
+  if(alert){
+    const z = alert.D2||{};
+    const pill = c => `<span class="pill ${c||''}">${{green:'verde',yellow:'giallo',orange:'arancione',red:'rosso'}[c]||'n.d.'}</span>`;
+    $('alert').innerHTML = `
+      <div class="row"><span>Mareggiate</span>${pill(z.mareggiate)}</div>
+      <div class="row"><span>Stato del mare</span>${pill(z.stato_mare)}</div>
+      <div class="row"><span>Vento</span>${pill(z.vento)}</div>
+      <div class="row"><span>Piene dei fiumi</span>${pill(z.idraulica)}</div>
+      <div class="d" style="margin-top:8px">${alert.titolo||''}${alert.link?` · <a href="https://allertameteo.regione.emilia-romagna.it${alert.link}" target="_blank" rel="noopener">PDF</a>`:''}</div>`;
+  }
+  // altri mareografi
+  if(others){
+    const name = s => s.replace(' Porto','');
+    $('others').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Livello</th></tr>` +
+      others.rows.map(r=>`<tr><td>${name(r.nomestaz)}</td><td>${r.value==null?'–':m(r.value)+'<span class="u">m</span>'}</td></tr>`).join('') +
+      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}, ogni 30 minuti. Porto Garibaldi qui è un sensore diverso da quello del grafico.</div>`;
+  }
+  // sacca
+  if(sacca&&sacca.length){
+    const n1 = v => v==null?'–':v.toFixed(1).replace('.',',');
+    $('sacca').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Acqua</th><th>Salinità</th></tr>` +
+      sacca.map(s=>`<tr><td>${s.name}</td><td>${n1(s.temp)}<span class="u">°C</span></td><td>${n1(s.sal)}<span class="u">‰</span></td></tr>`).join('') +
+      `</table><div class="d">Letture del ${sacca[0].when}, ogni 30 minuti. Salinità del mare aperto circa 35 ‰: più è bassa, più acqua del Po c'è.</div>`;
+  } else $('sacca').innerHTML='<div class="d">Dati non disponibili.</div>';
+}
+
+/* ---------- calendario astronomico ---------- */
+function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
+  const [y,mo,d]=dateStr.split('-').map(Number);
+  let t=Date.UTC(y,mo-1,d,0,0); // prova: mezzanotte UTC, poi correggi con l'offset locale di Roma
+  for(let i=0;i<2;i++){ const parts=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',hour12:false,minute:'2-digit'}).formatToParts(new Date(t)); const hh=+parts.find(p=>p.type==='hour').value%24, mm=+parts.find(p=>p.type==='minute').value; t-= (hh*60+mm)*60e3; if(hh===0&&mm===0) break; }
+  return t;
+}
+function todayStr(){ const p=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()); return p; }
+function shiftDate(s,days){ const [y,m,d]=s.split('-').map(Number); const dt=new Date(Date.UTC(y,m-1,d+days)); return dt.toISOString().slice(0,10); }
+function renderAstro(){
+  const inp=$('astroDate'); if(!inp.value) inp.value=todayStr();
+  const start=romeDayStart(inp.value), today=todayStr();
+  const ex=astroExtrema(start, start+7*86400e3);
+  const fmtDay=new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short',timeZone:TZ});
+  const dayKey=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'});
+  let html='';
+  for(let i=0;i<7;i++){
+    const d0=start+i*86400e3, key=dayKey.format(new Date(d0));
+    const es=ex.filter(e=>dayKey.format(new Date(e.t))===key);
+    html+=`<div class="day${key===today?' today':''}"><h3>${fmtDay.format(new Date(d0))}</h3>`+
+      (es.length?es.map(e=>`<div class="e ${e.type}"><span class="k">${e.type}</span><b>${fmtT(new Date(e.t))}</b><span>${m(e.v)} m</span></div>`).join(''):'<div class="e"><span>marea piatta</span></div>')+`</div>`;
+  }
+  $('astroCal').innerHTML=html;
+}
+$('astroDate').addEventListener('change', renderAstro);
+$('astroToday').addEventListener('click', ()=>{ $('astroDate').value=todayStr(); renderAstro(); });
+$('astroPrev').addEventListener('click', ()=>{ $('astroDate').value=shiftDate($('astroDate').value||todayStr(),-7); renderAstro(); });
+$('astroNext').addEventListener('click', ()=>{ $('astroDate').value=shiftDate($('astroDate').value||todayStr(),7); renderAstro(); });
+renderAstro();
+
+/* ---------- main ---------- */
+let busy=false;
+async function load(){
+  if(busy) return; busy=true;
+  $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
+  const errs=[];
+  const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
+  const [obs, fc, alert, others, sacca] = await Promise.all([
+    safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
+    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca')
+  ]);
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca};
+  if(!obs&&!fc){
+    try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
+  } else {
+    try{ localStorage.setItem('marea-cache',JSON.stringify({at:Date.now(),data})); }catch(e){}
+    $('status').textContent = `Aggiornato ${fmtT(new Date())}` + (fc?` · previsione Adriac del ${fmtD(fc.emission)}`:'');
+  }
+  try{ render(data); }catch(e){ errs.push('rendering: '+e.message); }
+  if(errs.length){ $('error').textContent='Alcune fonti non hanno risposto: '+errs.join(' · '); $('error').hidden=false; }
+  $('refresh').disabled=false; busy=false;
+}
+$('refresh').addEventListener('click', load);
+let lastData=null; const _render=render; render=function(d){ lastData=d; _render(d); };
+let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(lastData) try{ render(lastData); }catch(e){} }, 150); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) load(); });
+// Arpae pubblica le letture a hh:00/10/20… circa 20 min dopo, intorno a hh:x0+0:30: aggiorna un minuto dopo ogni decina
+function scheduleNext(){ const n=new Date(); const ms=((10-(n.getMinutes()%10))*60-n.getSeconds())*1000+60e3; setTimeout(()=>{ load(); scheduleNext(); }, ms); }
+scheduleNext();
+load();
+if('serviceWorker' in navigator && location.protocol==='https:'){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
