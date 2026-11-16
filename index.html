@@ -24,21 +24,29 @@
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
-  :root{ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
+  :root:not([data-theme="light"]){ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
     --sea:#8fb4ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
     --fc:#d8b55e; --fc-old:#d8b55e66; --now:#eef1f6; color-scheme:dark; }
 }
+:root[data-theme="dark"]{ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
+  --sea:#8fb4ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
+  --fc:#d8b55e; --fc-old:#d8b55e66; --now:#eef1f6; color-scheme:dark; }
+#themeBtn .sun{display:none} #themeBtn .moon{display:inline}
+:root[data-theme="dark"] #themeBtn .sun{display:inline} :root[data-theme="dark"] #themeBtn .moon{display:none}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #themeBtn .sun{display:inline} :root:not([data-theme="light"]) #themeBtn .moon{display:none} }
+header .btns{display:flex;gap:6px}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-variant-numeric:tabular-nums}
 body{padding-block:0 36px;padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
 header{position:relative;padding:calc(10px + env(safe-area-inset-top,0px)) 4px 10px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;border-bottom:1px solid var(--line);margin-bottom:14px}
 header .logo{height:58px;width:auto;display:block;mix-blend-mode:multiply}
-h1{font-family:var(--display);font-size:1.25rem;margin:0;font-weight:300;letter-spacing:3px;line-height:1;text-transform:uppercase;color:var(--fg)}
+h1{font-family:var(--display);font-size:1.15rem;margin:0;font-weight:300;letter-spacing:2.2px;line-height:1;text-transform:uppercase;color:var(--fg);white-space:nowrap}
 h1 span{color:var(--sand)}
 .sub{font-size:.72rem;color:var(--muted);margin-top:5px;letter-spacing:.2px}
 button{font:inherit;font-weight:500;border:1px solid var(--sand);background:var(--card);color:var(--fg);border-radius:999px;padding:8px 14px;cursor:pointer}
-header button{padding:8px 12px}
+header button{padding:0;width:36px;height:36px;line-height:34px;text-align:center;font-size:1rem}
+header .logo{height:50px}
 button:focus-visible{outline:2px solid var(--sand)}
 .hero{background:var(--card);border-radius:14px;padding:14px 10px 8px;border:1px solid var(--line)}
 .kpi{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:0 6px 8px}
@@ -128,7 +136,10 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <h1>Marea <span>Goro</span></h1>
     <div class="sub" id="status">Carico i dati…</div>
   </div>
-  <button id="refresh" aria-label="Aggiorna" title="Aggiorna">↻</button>
+  <div class="btns">
+    <button id="themeBtn" aria-label="Cambia tema giorno/notte" title="Giorno / notte"><span class="moon">☾</span><span class="sun">☀</span></button>
+    <button id="refresh" aria-label="Aggiorna" title="Aggiorna">↻</button>
+  </div>
 </header>
 
 <section class="hero" aria-label="Grafico marea Porto Garibaldi">
@@ -650,6 +661,11 @@ async function load(){
   $('refresh').disabled=false; busy=false;
 }
 $('refresh').addEventListener('click', load);
+// tema giorno/notte: finché non si tocca il tasto segue il telefono; poi resta memorizzato
+function applyTheme(t){ const root=document.documentElement; if(t) root.setAttribute('data-theme',t); else root.removeAttribute('data-theme'); const dark = t==='dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches); document.querySelector('meta[name=theme-color]').setAttribute('content', dark?'#0b1b36':'#ffffff'); }
+let theme=null; try{ theme=localStorage.getItem('theme')||null; }catch(e){}
+applyTheme(theme);
+$('themeBtn').addEventListener('click', ()=>{ const dark = document.documentElement.getAttribute('data-theme')==='dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); theme = dark?'light':'dark'; try{ localStorage.setItem('theme',theme); }catch(e){} applyTheme(theme); });
 $('chartToggle').addEventListener('click', ()=>{ chartDetails=!chartDetails; try{ localStorage.setItem('chart-details', chartDetails?'1':'0'); }catch(e){} if(lastData) render(lastData); });
 let lastData=null; const _render=render; render=function(d){ lastData=d; _render(d); };
 let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(lastData) try{ render(lastData); }catch(e){} }, 150); });
