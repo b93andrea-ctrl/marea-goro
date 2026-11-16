@@ -1,7 +1,7 @@
 // Service worker: tiene in cache la "shell" dell'app per l'avvio offline.
 // I dati (Arpae, allertameteo) vengono sempre presi dalla rete; l'ultimo set valido lo salva la pagina in localStorage.
-const CACHE = 'marea-goro-v1';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png'];
+const CACHE = 'marea-goro-v2';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './logo-wave.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
