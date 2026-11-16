@@ -31,9 +31,9 @@
 :root[data-theme="dark"]{ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
   --sea:#8fb4ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
   --fc:#d8b55e; --fc-old:#d8b55e66; --now:#eef1f6; color-scheme:dark; }
-#themeBtn .sun{display:none} #themeBtn .moon{display:inline}
-:root[data-theme="dark"] #themeBtn .sun{display:inline} :root[data-theme="dark"] #themeBtn .moon{display:none}
-@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #themeBtn .sun{display:inline} :root:not([data-theme="light"]) #themeBtn .moon{display:none} }
+#themeBtn .sun{display:none} #themeBtn .moon{display:block}
+:root[data-theme="dark"] #themeBtn .sun{display:block} :root[data-theme="dark"] #themeBtn .moon{display:none}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #themeBtn .sun{display:block} :root:not([data-theme="light"]) #themeBtn .moon{display:none} }
 header .btns{display:flex;gap:6px}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-variant-numeric:tabular-nums}
@@ -45,7 +45,8 @@ h1{font-family:var(--display);font-size:1.15rem;margin:0;font-weight:300;letter-
 h1 span{color:var(--sand)}
 .sub{font-size:.72rem;color:var(--muted);margin-top:5px;letter-spacing:.2px}
 button{font:inherit;font-weight:500;border:1px solid var(--sand);background:var(--card);color:var(--fg);border-radius:999px;padding:8px 14px;cursor:pointer}
-header button{padding:0;width:36px;height:36px;line-height:34px;text-align:center;font-size:1rem}
+header button{padding:0;width:36px;height:36px;line-height:1;display:inline-flex;align-items:center;justify-content:center;font-size:1rem}
+#themeBtn svg{display:block}
 header .logo{height:50px}
 button:focus-visible{outline:2px solid var(--sand)}
 .hero{background:var(--card);border-radius:14px;padding:14px 10px 8px;border:1px solid var(--line)}
@@ -140,7 +141,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <div class="sub" id="status">Carico i dati…</div>
   </div>
   <div class="btns">
-    <button id="themeBtn" aria-label="Cambia tema giorno/notte" title="Giorno / notte"><span class="moon">☾</span><span class="sun">☀</span></button>
+    <button id="themeBtn" aria-label="Cambia tema giorno/notte" title="Giorno / notte"><svg class="moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path transform="translate(1.95 0)" d="M17.09 4.58A9 9 0 1 0 17.09 19.42A7.5 7.5 0 1 1 17.09 4.58Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><svg class="sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></g></svg></button>
     <button id="refresh" aria-label="Aggiorna" title="Aggiorna">↻</button>
   </div>
 </header>
