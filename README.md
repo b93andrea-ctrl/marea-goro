@@ -13,13 +13,14 @@ Pagina web installabile sul telefono (PWA). Legge direttamente i dati pubblici d
 7. Altri mareografi (Cervia, Cattolica) e temperatura/salinità nelle stazioni della Sacca.
 8. **Marea astronomica**: curva punteggiata sul grafico e calendario di 7 giorni (alte/basse con orario e livello) navigabile a settimane, per qualsiasi data. Calcolata nell'app da 19 costanti armoniche di Porto Garibaldi stimate il 16/11/2026 su tre anni di dati orari Arpae (01/01/2024 – 16/11/2026, tutti sullo zero RGC2023): M2 18,1 cm, K1 16,3, S2 10,6, P1 5,6, O1 5,0, Sa 3,5, …, con correzioni nodali. Residuo non spiegato 13,6 cm RMS (è la parte meteo). Verifica su 8 giorni di alte/basse misurate: ritardo medio 4 minuti, entro 20 minuti nei giorni calmi.
 9. **Previsione Adriac corretta**: l'errore della previsione misurato sulle ultime 6 ore viene applicato alle ore successive con decadimento di 4 ore. Test a ritroso (14-15 nov, maltempo): errore a +1 h da 16 a 6 cm, a +3 h da 15 a 12 cm, invariato oltre +6 h. Le alte/basse previste e i massimi/minimi 48 h usano la curva corretta; la Adriac grezza resta visibile punteggiata.
+10. **Vento e pressione** nella scheda Scostamento meteo: anemometro di Porto Garibaldi (10 m) e barometro di Guagnino/Comacchio con tendenza a 3 ore, dallo stesso servizio dei mareografi di allertameteo; una riga spiega se il vento tende ad alzare o abbassare il mare.
 
 Aggiornamento automatico ogni 10 minuti e quando riapri l'app. Se la rete manca, mostra l'ultimo set di dati salvato.
 
 ## File
 
 - `app/index.html` — tutta l'app (HTML, CSS, JS, nessuna dipendenza esterna)
-- `app/manifest.webmanifest`, `app/sw.js`, `app/icon.svg`, `app/icon-192.png` — quanto serve per installarla come app
+- `app/manifest.webmanifest`, `app/sw.js`, `app/icon-192.png`, `app/icon-512.png` — quanto serve per installarla come app; `app/logo.jpg` è il logo originale, `app/logo-wave.png` il ritaglio dell'onda usato nell'intestazione
 - `serve.ps1` + `.claude/launch.json` — server locale di prova su http://localhost:8765/
 - `fonti-maree-goro.md` — tutte le fonti dati verificate, con gli indirizzi esatti
 

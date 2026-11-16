@@ -76,6 +76,9 @@ svg.chart{width:100%;height:auto;display:block;touch-action:pan-y}
 .card .v{font-family:var(--display);font-size:1.9rem;font-weight:300;line-height:1;color:var(--fg)}
 .card .v small{font-family:var(--font);font-size:.85rem;color:var(--muted);font-weight:500}
 .card .d{font-size:.8rem;color:var(--muted);margin-top:4px}
+.meteo{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+.meteo .mv{font-family:var(--display);font-size:1.25rem;font-weight:400;color:var(--fg);line-height:1.2}
+.meteo .mv small{font-family:var(--font);font-size:.75rem;color:var(--muted);font-weight:500}
 .card.half{grid-column:span 2}
 @media (max-width:560px){.card.half{grid-column:1/-1}}
 table.t{width:100%;border-collapse:collapse;font-size:.92rem}
@@ -172,7 +175,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   <div class="card wide">
     <h2>Prossime alte e basse previste (Adriac corretta, Porto Garibaldi)</h2>
     <div class="extrema" id="extrema"></div>
-    <div class="d" id="saccaNote">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
+    <div class="d">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
   </div>
 
   <div class="card wide">
@@ -192,6 +195,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <div class="v" id="surge">–</div>
     <div class="d">Quanto il mare reale sta sopra (+) o sotto (−) la previsione.</div>
     <div class="d" id="surgeCorr"></div>
+    <div class="twocol meteo" id="meteo"></div>
   </div>
 
   <div class="card wide">
@@ -246,7 +250,7 @@ const $ = id => document.getElementById(id);
 const fmtT = d => new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:TZ}).format(d);
 const fmtD = d => new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',timeZone:TZ}).format(d);
 const fmtDT = d => fmtD(d)+' '+fmtT(d);
-const m = v => (v==null||isNaN(v)) ? '–' : (v>=0?'+':'−')+Math.abs(v).toFixed(2).replace('.',',');
+const m = v => { if(v==null||isNaN(v)) return '–'; const r=Math.round(v*100)/100; return (r>=0?'+':'−')+Math.abs(r).toFixed(2).replace('.',','); };
 const cm = v => (v==null||isNaN(v)) ? '–' : (v>=0?'+':'−')+Math.round(Math.abs(v)*100);
 
 async function getJSON(url, ms=15000){
@@ -284,6 +288,24 @@ async function fetchOthers(){
     const j = await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=254,0,0/101,-,-,-/B22037&time=${slot}`);
     const rows = j.filter(x=>x.idstazione);
     if(rows.some(r=>r.value!=null)) return {time:slot, rows};
+    slot -= 1800e3;
+  }
+  return null;
+}
+async function fetchMeteo(){
+  // vento a Porto Garibaldi (14387, anemometro a 10 m) e pressione a Guagnino/Comacchio (12459, la più vicina con barometro);
+  // stesso endpoint dei mareografi, valori istantanei alla mezz'ora
+  const V = { spd:'254,0,0/103,10000,-,-/B11002', dir:'254,0,0/103,10000,-,-/B11001', prs:'254,0,0/1,-,-,-/B10004' };
+  const pick = (j, ids) => { for(const id of ids){ const r=(j||[]).find(x=>x.idstazione===id && x.value!=null); if(r) return r; } return null; };
+  let slot = Math.floor(Date.now()/1800e3)*1800e3;
+  for(let k=0;k<3;k++){
+    const [s,d,p] = await Promise.all([V.spd,V.dir,V.prs].map(v=>getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=${v}&time=${slot}`).catch(()=>null)));
+    const spd=pick(s,['14387','12459']), dir=pick(d,['14387','12459']), prs=pick(p,['12459','14101']);
+    if(spd||prs){
+      let prs3=null;
+      if(prs){ try{ const p3=await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=${V.prs}&time=${slot-3*3600e3}`); prs3=pick(p3,[prs.idstazione]); }catch(e){} }
+      return { time:slot, spd: spd?{v:spd.value, st:spd.nomestaz}:null, dir: dir?dir.value:null, prs: prs?{v:prs.value/100, st:prs.nomestaz, d3: prs3?(prs.value-prs3.value)/100:null}:null };
+    }
     slot -= 1800e3;
   }
   return null;
@@ -495,7 +517,7 @@ try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
-  const {obs, fc, alert, others, sacca} = data;
+  const {obs, fc, alert, others, sacca, meteo} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
   const nc = nowcast(obs, fc.latest, now);
@@ -541,6 +563,21 @@ function render(data){
   }
   // correzione applicata
   $('surgeCorr').textContent = cf ? `Previsione corretta di ${cm(cf.offW)} cm per le prossime ore.` : 'Previsione non corretta: poche letture recenti.';
+  // vento e pressione
+  if(meteo){
+    const dirName = a => a==null?'':['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
+    const kmh = meteo.spd ? Math.round(meteo.spd.v*3.6) : null;
+    const kn = meteo.spd ? (meteo.spd.v*1.9438).toFixed(0) : null;
+    const wind = meteo.spd ? `<div class="mv">${kmh}<small> km/h</small> ${meteo.dir!=null?`da ${dirName(meteo.dir)}`:''}</div><div class="d">${kn} nodi · ${meteo.spd.st}</div>` : '<div class="d">non disponibile</div>';
+    const p3 = meteo.prs && meteo.prs.d3!=null ? meteo.prs.d3 : null;
+    const tend = p3==null ? '' : Math.abs(p3)<0.5 ? 'stabile' : (p3>0?'↗ +':'↘ −')+Math.abs(p3).toFixed(1).replace('.',',')+' hPa in 3 h';
+    const prs = meteo.prs ? `<div class="mv">${meteo.prs.v.toFixed(1).replace('.',',')}<small> hPa</small></div><div class="d">${tend}${tend?' · ':''}${meteo.prs.st}</div>` : '<div class="d">non disponibile</div>';
+    // lettura rapida: scirocco/levante e pressione in calo alzano il mare; bora/maestrale e alta pressione lo abbassano
+    let hint='';
+    if(meteo.spd && meteo.dir!=null && kmh>=15){ const a=meteo.dir; hint = (a>=70&&a<=170) ? 'Vento da mare (scirocco/levante): tende ad alzare il livello.' : (a>=0&&a<=60)||a>=340 ? 'Bora: mare mosso, livello spesso sotto la previsione.' : (a>=200&&a<=330) ? 'Vento da terra: tende ad abbassare il livello.' : ''; }
+    else if(meteo.prs && p3!=null && p3<=-2) hint='Pressione in calo rapido: possibile sovralzo nelle prossime ore.';
+    $('meteo').innerHTML = `<div><div class="lbl">Vento</div>${wind}</div><div><div class="lbl">Pressione</div>${prs}</div>` + (hint?`<div class="d" style="grid-column:1/-1;margin-top:0">${hint}</div>`:'') + `<div class="d" style="grid-column:1/-1;margin-top:0">Letture delle ${fmtT(new Date(meteo.time))}.</div>`;
+  } else $('meteo').innerHTML = '<div class="d" style="grid-column:1/-1">Vento e pressione: fonte non raggiungibile.</div>';
   // previsione 48h (corretta)
   const f48 = fcUse.filter(p=>p.t>=now&&p.t<=now+48*3600e3);
   if(f48.length){
@@ -645,11 +682,11 @@ async function load(){
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, others, sacca] = await Promise.all([
+  const [obs, fc, alert, others, sacca, meteo] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca')
+    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca'), safe(fetchMeteo(),'vento e pressione')
   ]);
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca};
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca, meteo};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
