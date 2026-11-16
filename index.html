@@ -51,12 +51,23 @@ button:focus-visible{outline:2px solid var(--sand)}
 .kpi .next b{font-family:var(--display);color:var(--fg);font-size:1.25rem;font-weight:600}
 svg.chart{width:100%;height:auto;display:block;touch-action:pan-y}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;color:var(--muted);padding:6px 4px 0}
+.chart-simple .legend .x{display:none}
+.legend .lnk{margin-left:auto;border:0;background:none;padding:2px 4px;color:var(--sea);font-size:.78rem;font-weight:600;text-decoration:underline}
 .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px;border-radius:2px}
+.ask{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;margin:12px 4px 4px;padding-top:10px;border-top:1px solid var(--line)}
+.ask label{font-family:var(--display);font-size:.95rem;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+.ask input[type=time]{font:inherit;font-family:var(--display);font-size:1.3rem;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:6px 10px;min-width:0}
+.ask .ans{grid-column:1/-1;font-size:.95rem;line-height:1.4}
+.ask .ans b{font-family:var(--display);font-size:1.5rem;font-weight:700;color:var(--sea)}
+.ask .ans .up{color:var(--sea)} .ask .ans .down{color:var(--sand)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
 .card.wide{grid-column:1/-1}
 .card h2{font-family:var(--display);font-size:.95rem;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 10px;font-weight:600;padding-bottom:6px;border-bottom:2px solid var(--sand-soft);position:relative}
 .card h2::after{content:"";position:absolute;left:0;bottom:-2px;width:34px;height:2px;background:var(--sand)}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.6px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.twocol>div:first-child .lbl{color:var(--sea)} .twocol>div:last-child .lbl{color:var(--sand)}
 .card .v{font-family:var(--display);font-size:2rem;font-weight:700;line-height:1}
 .card .v small{font-family:var(--font);font-size:.85rem;color:var(--muted);font-weight:500}
 .card .d{font-size:.8rem;color:var(--muted);margin-top:4px}
@@ -88,6 +99,9 @@ table.t td .u{color:var(--muted);font-weight:500;font-size:.8rem;margin-left:2px
 .astro .e b{font-family:var(--display);font-size:1.05rem}
 table.t td{font-family:var(--display);font-size:1.1rem}
 table.t td:first-child{font-family:var(--font);font-size:.92rem}
+.astroctl{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+.astroctl input[type=date]{flex:1;min-width:0}
+.astroctl button{padding:8px 12px;font-size:1.05rem;line-height:1}
 .astro{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .astro .day{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .astro .day h3{margin:0 0 4px;font-size:.8rem;font-weight:700;text-transform:capitalize}
@@ -99,7 +113,8 @@ table.t td:first-child{font-family:var(--font);font-size:.92rem}
 .astro .e span:last-child{color:var(--muted)}
 input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:7px 10px}
 .note{font-size:.75rem;color:var(--muted);margin-top:14px;line-height:1.45;padding:0 4px}
-.err{background:#c8332b22;border:1px solid #c8332b66;color:var(--fg);padding:8px 10px;border-radius:10px;font-size:.85rem;margin-top:10px}
+.err{color:var(--muted);font-size:.75rem;margin:8px 4px 0;line-height:1.4}
+.err::before{content:"⚠ ";color:var(--warn)}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -121,62 +136,65 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </div>
   <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Livello del mare osservato e previsto"></svg>
   <div class="legend">
-    <span><i style="border-color:var(--sea)"></i>Osservato Porto Garibaldi</span>
-    <span><i style="border-color:var(--sea);border-top-style:dashed"></i>Stima fino ad adesso</span>
-    <span><i style="border-color:var(--fc);border-top-style:dashed"></i>Previsione Adriac corretta con le letture</span>
-    <span><i style="border-color:var(--fc);border-top-style:dotted;opacity:.6"></i>Adriac grezza</span>
-    <span><i style="border-color:var(--fc-old);border-top-style:dotted"></i>Emissione precedente</span>
-    <span><i style="border-color:var(--muted);border-top-style:dotted"></i>Astronomica</span>
-    <span><i style="border-color:var(--warn)"></i>0,70 m</span>
+    <span><i style="border-color:var(--sea)"></i>Misurato</span>
+    <span><i style="border-color:var(--fc);border-top-style:dashed"></i>Previsto</span>
+    <span class="x"><i style="border-color:var(--sea);border-top-style:dashed"></i>Stima fino ad adesso</span>
+    <span class="x"><i style="border-color:var(--fc);border-top-style:dotted;opacity:.6"></i>Adriac grezza</span>
+    <span class="x"><i style="border-color:var(--fc-old);border-top-style:dotted"></i>Emissione precedente</span>
+    <span class="x"><i style="border-color:var(--muted);border-top-style:dotted"></i>Astronomica</span>
+    <span><i style="border-color:var(--warn)"></i>0,70</span>
     <span><i style="border-color:var(--crit)"></i>0,80 m</span>
+    <button type="button" id="chartToggle" class="lnk" hidden>Più dettagli</button>
+  </div>
+  <div class="ask">
+    <label for="askTime">A che ora?</label>
+    <input type="time" id="askTime" step="300">
+    <button type="button" id="askNow" title="Fra un'ora">+1 h</button>
+    <div class="ans" id="askAns">Scegli un orario per avere il livello stimato.</div>
   </div>
 </section>
-
-<div id="error" class="err" hidden></div>
 
 <section class="grid" id="stats">
   <div class="card wide">
     <h2>Prossime alte e basse previste (Adriac corretta, Porto Garibaldi)</h2>
     <div class="extrema" id="extrema"></div>
-    <div class="d" id="saccaNote">Dentro la Sacca gli orari arrivano in ritardo rispetto al mare aperto: considera uno scarto di decine di minuti a seconda della zona.</div>
+    <div class="d" id="saccaNote">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
   </div>
 
   <div class="card wide">
     <h2>Marea astronomica · calendario</h2>
-    <div class="ctl" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+    <div class="astroctl">
+      <button type="button" id="astroPrev" aria-label="Settimana precedente">‹</button>
       <input type="date" id="astroDate" aria-label="Giorno di partenza">
+      <button type="button" id="astroNext" aria-label="Settimana successiva">›</button>
       <button type="button" id="astroToday">Oggi</button>
-      <button type="button" id="astroPrev" aria-label="Settimana precedente">‹ 7 g</button>
-      <button type="button" id="astroNext" aria-label="Settimana successiva">7 g ›</button>
     </div>
     <div id="astroCal" class="astro"></div>
-    <div class="d">Solo luna e sole, calcolata dalle costanti armoniche di Porto Garibaldi (un anno di dati Arpae). Il livello reale si scosta anche di decine di cm con scirocco, bora o bassa pressione: per il giorno dopo guarda la previsione Adriac nel grafico.</div>
+    <div class="d">Solo luna e sole, senza meteo: per domani fidati del grafico.</div>
   </div>
 
-  <div class="card">
+  <div class="card wide">
     <h2>Scostamento meteo</h2>
     <div class="v" id="surge">–</div>
-    <div class="d" id="surgeAstro"></div>
-    <div class="d">Osservato meno previsione Adriac allo stesso istante. Positivo = vento o pressione stanno alzando il mare.</div>
+    <div class="d">Quanto il mare reale sta sopra (+) o sotto (−) la previsione.</div>
     <div class="d" id="surgeCorr"></div>
   </div>
 
-  <div class="card">
+  <div class="card wide">
     <h2>Ultime 24 ore osservate</h2>
-    <div class="v" id="obsMax">–</div>
-    <div class="d" id="obsMin"></div>
+    <div class="twocol">
+      <div><div class="lbl">▲ Massimo</div><div class="v" id="obsMax">–</div><div class="d" id="obsMaxWhen"></div></div>
+      <div><div class="lbl">▼ Minimo</div><div class="v" id="obsMin">–</div><div class="d" id="obsMinWhen"></div></div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Massimo previsto 48 h</h2>
-    <div class="v" id="fcMax">–</div>
-    <div class="d" id="fcMaxWhen"></div>
-  </div>
-
-  <div class="card">
-    <h2>Minimo previsto 48 h</h2>
-    <div class="v" id="fcMin">–</div>
-    <div class="d" id="fcMinWhen"></div>
+  <div class="card wide">
+    <h2>Prossime 48 ore previste</h2>
+    <div class="twocol">
+      <div><div class="lbl">▲ Massimo</div><div class="v" id="fcMax">–</div><div class="d" id="fcMaxWhen"></div></div>
+      <div><div class="lbl">▼ Minimo</div><div class="v" id="fcMin">–</div><div class="d" id="fcMinWhen"></div></div>
+    </div>
+    <div class="d" id="fcEmission"></div>
   </div>
 
   <div class="card wide">
@@ -190,15 +208,16 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </div>
 
   <div class="card half">
-    <h2>Acqua nella Sacca di Goro</h2>
+    <h2>Acqua nella Sacca di Goro (ogni ora)</h2>
     <div id="sacca"></div>
   </div>
 
 
 </section>
 
+<div id="error" class="err" hidden></div>
 <p class="note">
-Fonti: Arpae Emilia-Romagna (mareografo Porto Garibaldi, modello Adriac, stazioni Daphne) e Agenzia regionale per la sicurezza territoriale e la protezione civile. Livelli riferiti allo zero Arpae (RGC2023). Orari in ora italiana. Il Faro di Goro non ha un feed pubblico: Porto Garibaldi è il riferimento più vicino. Il mareografo misura ogni 10 minuti ma Arpae pubblica ogni lettura con circa 20 minuti di ritardo: il dato "attuale" ha sempre 20–30 minuti.
+Dati Arpae Emilia-Romagna e Protezione civile ER. Livelli sullo zero Arpae, orari italiani. Il mareografo di Porto Garibaldi è il più vicino a Goro; Arpae pubblica ogni lettura con circa 20 minuti di ritardo.
 </p>
 
 <script>
@@ -245,9 +264,15 @@ async function fetchForecast(){
 }
 async function fetchAlert(){ return getJSON(`${AM}o/get-stato-allerta`); }
 async function fetchOthers(){
-  const slot = Math.floor(Date.now()/1800e3)*1800e3 - 1800e3;
-  const j = await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=254,0,0/101,-,-,-/B22037&time=${slot}`);
-  return {time:slot, rows:j.filter(x=>x.idstazione)};
+  // ultima mezz'ora intera; se non ancora pubblicata, quella prima
+  let slot = Math.floor(Date.now()/1800e3)*1800e3;
+  for(let k=0;k<3;k++){
+    const j = await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=254,0,0/101,-,-,-/B22037&time=${slot}`);
+    const rows = j.filter(x=>x.idstazione);
+    if(rows.some(r=>r.value!=null)) return {time:slot, rows};
+    slot -= 1800e3;
+  }
+  return null;
 }
 async function fetchSacca(){
   const ids = {'53145':'Bocca Scanno','53144':'Gorino','53143':'Punta Volano'};
@@ -257,7 +282,9 @@ async function fetchSacca(){
       const s = await getJSON(`${A}meteo_marefe/${id}`);
       const days = Object.keys(s.dati||{}).sort(); const d = days[days.length-1];
       const hs = Object.keys(s.dati[d]).sort();
-      for(let k=hs.length-1;k>=0;k--){ const r = s.dati[d][hs[k]]; if(r.salinita_istantanea!=null||r.temperatura_acqua_mare!=null){ out.push({name:ids[id], when:d.slice(6,8)+'/'+d.slice(4,6)+' '+hs[k].slice(0,2)+':'+hs[k].slice(2), sal:r.salinita_istantanea, temp:r.temperatura_acqua_mare, ox:r.ossigeno_disciolto}); break; } }
+      for(let k=hs.length-1;k>=0;k--){ const r = s.dati[d][hs[k]]; if(r.salinita_istantanea!=null||r.temperatura_acqua_mare!=null){
+        const t = Date.UTC(+d.slice(0,4), +d.slice(4,6)-1, +d.slice(6,8), +hs[k].slice(0,2), +hs[k].slice(2)); // chiavi in UTC
+        out.push({name:ids[id], t, sal:r.salinita_istantanea, temp:r.temperatura_acqua_mare, ox:r.ossigeno_disciolto}); break; } }
     }catch(e){}
   }));
   return out.sort((a,b)=>a.name.localeCompare(b.name));
@@ -376,10 +403,11 @@ function extrema(series, fromT, win=3, MIN_AMP=0.08){
 function drawChart(obs, fc, fcPrev, ext, nc, cf){
   const svg = $('chart');
   const W = Math.max(320, Math.round(svg.getBoundingClientRect().width||720)), narrow = W<520;
+  const simple = narrow && !chartDetails;   // telefono: solo misurato + previsione corretta, finestra corta
   const H = narrow?250:300, L=narrow?34:40, R=10, T=14, B=34;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   const now = Date.now();
-  const t0 = now-24*3600e3, t1 = now+48*3600e3;
+  const t0 = simple ? now-12*3600e3 : now-24*3600e3, t1 = simple ? now+24*3600e3 : now+48*3600e3;
   const all = [...obs,...fc].filter(p=>p.t>=t0&&p.t<=t1).map(p=>p.v);
   let yMin = Math.min(-0.5,...all)-0.05, yMax = Math.max(0.9,...all)+0.05;
   const x = t => L+(t-t0)/(t1-t0)*(W-L-R);
@@ -399,7 +427,7 @@ function drawChart(obs, fc, fcPrev, ext, nc, cf){
   const d = new Date(t0); d.setMinutes(0,0,0);
   for(let t=d.getTime(); t<=t1; t+=3600e3){
     const dt=new Date(t); const hh=parseInt(new Intl.DateTimeFormat('it-IT',{hour:'2-digit',hour12:false,timeZone:TZ}).format(dt),10);
-    if(hh%(narrow?12:6)!==0) continue;
+    if(hh%(simple?6:narrow?12:6)!==0) continue;
     const xx=x(t); const mid=hh===0;
     g+=`<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}" stroke="var(--line)" stroke-width="${mid?1.5:0.6}" ${mid?'':'stroke-dasharray="2 3"'}/>`;
     g+=`<text x="${xx}" y="${H-B+14}" font-size="11" text-anchor="middle" fill="var(--muted)">${String(hh).padStart(2,'0')}</text>`;
@@ -409,18 +437,20 @@ function drawChart(obs, fc, fcPrev, ext, nc, cf){
   g+=`<line x1="${L}" x2="${W-R}" y1="${y(0.7)}" y2="${y(0.7)}" stroke="var(--warn)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
   g+=`<line x1="${L}" x2="${W-R}" y1="${y(0.8)}" y2="${y(0.8)}" stroke="var(--crit)" stroke-width="1.2" stroke-dasharray="4 3"/>`;
   // serie
-  g+=`<path d="${path(astroSeries(t0,t1,20))}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="1 3" opacity=".9"/>`;
-  if(fcPrev.length) g+=`<path d="${path(fcPrev)}" fill="none" stroke="var(--fc-old)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+  if(!simple){
+    g+=`<path d="${path(astroSeries(t0,t1,20))}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="1 3" opacity=".9"/>`;
+    if(fcPrev.length) g+=`<path d="${path(fcPrev)}" fill="none" stroke="var(--fc-old)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
+  }
   if(fc.length){
     const fcFut = fc.filter(p=>p.t>=now-20*60e3);
     if(cf && cf.series.length>2){
-      g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="2 3" opacity=".55"/>`;
-      g+=`<path d="${path(cf.series)}" fill="none" stroke="var(--fc)" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+      if(!simple) g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="2 3" opacity=".55"/>`;
+      g+=`<path d="${path(cf.series)}" fill="none" stroke="var(--fc)" stroke-width="${simple?2.6:2.2}" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
     } else {
-      g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="2.2" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+      g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="${simple?2.6:2.2}" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
     }
     const fcPast = fc.filter(p=>p.t<=now);
-    if(fcPast.length>1) g+=`<path d="${path(fcPast)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="3 3" opacity=".6"/>`;
+    if(!simple && fcPast.length>1) g+=`<path d="${path(fcPast)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="3 3" opacity=".6"/>`;
   }
   if(obs.length){
     const area = path(obs)+` L${x(Math.min(obs[obs.length-1].t,t1)).toFixed(1)} ${y(yMin)} L${x(Math.max(obs[0].t,t0)).toFixed(1)} ${y(yMin)} Z`;
@@ -435,15 +465,19 @@ function drawChart(obs, fc, fcPrev, ext, nc, cf){
   // adesso
   g+=`<line x1="${x(now)}" x2="${x(now)}" y1="${T}" y2="${H-B}" stroke="var(--now)" stroke-width="1.2"/>`;
   g+=`<text x="${x(now)+4}" y="${T+10}" font-size="11" fill="var(--now)" font-weight="600">adesso ${fmtT(new Date(now))}</text>`;
-  // estremi
-  for(const e of ext.slice(0,5)){
+  // estremi (sul telefono solo i prossimi due)
+  for(const e of ext.slice(0, simple?2:5)){
     if(e.t>t1) continue;
     const xx=x(e.t), yy=y(e.v); const up=e.type==='alta';
     g+=`<circle cx="${xx}" cy="${yy}" r="3.5" fill="var(--card)" stroke="var(--fc)" stroke-width="2"/>`;
     g+=`<text x="${xx}" y="${up?yy-9:yy+17}" font-size="11" text-anchor="middle" fill="var(--fg)" font-weight="600">${fmtT(new Date(e.t))}</text>`;
   }
   svg.innerHTML = g;
+  document.body.classList.toggle('chart-simple', simple);
+  const tb=$('chartToggle'); if(tb){ tb.hidden=!narrow; tb.textContent = chartDetails ? 'Meno dettagli' : 'Più dettagli'; }
 }
+let chartDetails = false;
+try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
@@ -456,6 +490,8 @@ function render(data){
   const fcUse = cf ? fc.latest.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : fc.latest;
   const ext = extrema(fcUse, now-3600e3);
   drawChart(obs, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf);
+  askState = { fcUse, ext, nc };
+  renderAsk();
 
   if(last){
     const ago = Math.round((now-last.t)/60e3);
@@ -481,24 +517,24 @@ function render(data){
   if(last){
     const f = interp(fc.latest,last.t) ?? interp(fc.prev,last.t);
     if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit'; }
-    $('surgeAstro').textContent = `Rispetto alla marea astronomica: ${cm(last.v-astro(last.t))} cm`;
   }
   // 24h osservato
   const o24 = obs.filter(p=>p.t>=now-24*3600e3);
   if(o24.length){
     const mx=o24.reduce((a,b)=>b.v>a.v?b:a), mn=o24.reduce((a,b)=>b.v<a.v?b:a);
-    $('obsMax').innerHTML = `${m(mx.v)}<small> m alle ${fmtT(new Date(mx.t))}</small>`;
-    $('obsMin').textContent = `Minimo ${m(mn.v)} m alle ${fmtT(new Date(mn.t))}`;
+    $('obsMax').innerHTML = `${m(mx.v)}<small> m</small>`; $('obsMaxWhen').textContent = `alle ${fmtT(new Date(mx.t))}`;
+    $('obsMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('obsMinWhen').textContent = `alle ${fmtT(new Date(mn.t))}`;
   }
   // correzione applicata
-  $('surgeCorr').textContent = cf ? `Correzione applicata alla previsione: ${cm(cf.offW)} cm (media ultime 6 h), si esaurisce nelle prossime ${Math.round(CORR_TAU/3600e3*2)} ore.` : 'Correzione non applicata: poche letture recenti.';
+  $('surgeCorr').textContent = cf ? `Previsione corretta di ${cm(cf.offW)} cm per le prossime ore.` : 'Previsione non corretta: poche letture recenti.';
   // previsione 48h (corretta)
   const f48 = fcUse.filter(p=>p.t>=now&&p.t<=now+48*3600e3);
   if(f48.length){
     const mx=f48.reduce((a,b)=>b.v>a.v?b:a), mn=f48.reduce((a,b)=>b.v<a.v?b:a);
     $('fcMax').innerHTML = `${m(mx.v)}<small> m</small>`; $('fcMax').style.color = mx.v>=0.8?'var(--crit)':mx.v>=0.7?'var(--warn)':'inherit';
-    $('fcMaxWhen').textContent = fmtDT(new Date(mx.t))+` · emissione ${fmtD(fc.emission)}`;
+    $('fcMaxWhen').textContent = fmtDT(new Date(mx.t));
     $('fcMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('fcMinWhen').textContent = fmtDT(new Date(mn.t));
+    $('fcEmission').textContent = `Emissione Adriac di ${fmtD(fc.emission)}.`;
   }
   // allerta
   if(alert){
@@ -512,20 +548,51 @@ function render(data){
       <div class="d" style="margin-top:8px">${alert.titolo||''}${alert.link?` · <a href="https://allertameteo.regione.emilia-romagna.it${alert.link}" target="_blank" rel="noopener">PDF</a>`:''}</div>`;
   }
   // altri mareografi
+  if(!others) $('others').innerHTML = '<div class="d">Fonte non raggiungibile, riprovo tra poco.</div>';
   if(others){
     const name = s => s.replace(' Porto','');
     $('others').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Livello</th></tr>` +
       others.rows.map(r=>`<tr><td>${name(r.nomestaz)}</td><td>${r.value==null?'–':m(r.value)+'<span class="u">m</span>'}</td></tr>`).join('') +
-      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}, ogni 30 minuti. Porto Garibaldi qui è un sensore diverso da quello del grafico.</div>`;
+      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}.</div>`;
   }
   // sacca
   if(sacca&&sacca.length){
     const n1 = v => v==null?'–':v.toFixed(1).replace('.',',');
     $('sacca').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Acqua</th><th>Salinità</th></tr>` +
       sacca.map(s=>`<tr><td>${s.name}</td><td>${n1(s.temp)}<span class="u">°C</span></td><td>${n1(s.sal)}<span class="u">‰</span></td></tr>`).join('') +
-      `</table><div class="d">Letture del ${sacca[0].when}, ogni 30 minuti. Salinità del mare aperto circa 35 ‰: più è bassa, più acqua del Po c'è.</div>`;
+      `</table><div class="d">Letture delle ${fmtT(new Date(Math.max(...sacca.map(s=>s.t))))}. Mare aperto ≈ 35 ‰.</div>`;
   } else $('sacca').innerHTML='<div class="d">Dati non disponibili.</div>';
 }
+
+/* ---------- "A che ora?": livello stimato a un orario scelto ---------- */
+let askState = null;
+function nextOccurrence(hhmm){ // 'HH:MM' in ora italiana → prossimo istante futuro (oggi o domani)
+  const [h,mi]=hhmm.split(':').map(Number);
+  const base=romeDayStart(todayStr());
+  for(let d=0; d<3; d++){
+    const dayStart = d===0 ? base : romeDayStart(shiftDate(todayStr(), d));
+    const t = dayStart + (h*60+mi)*60e3;
+    if(t>Date.now()) return t;
+  }
+  return base+(h*60+mi)*60e3;
+}
+function renderAsk(){
+  const inp=$('askTime'), out=$('askAns');
+  if(!inp.value){ out.textContent='Scegli un orario per avere il livello stimato.'; return; }
+  const t=nextOccurrence(inp.value), now=Date.now();
+  const inDays = Math.round((t-romeDayStart(todayStr()))/86400e3 - 0.5);
+  const whenTxt = inDays<=0 ? 'oggi' : inDays===1 ? 'domani' : fmtD(new Date(t));
+  let v=null, src='';
+  if(askState && askState.fcUse.length){ v=interp(askState.fcUse,t); src='previsione'; }
+  if(v==null){ v=astro(t); src='marea astronomica, senza meteo'; }
+  const dv = (askState && askState.fcUse.length && interp(askState.fcUse,t+1800e3)!=null ? interp(askState.fcUse,t+1800e3) : astro(t+1800e3)) - v;
+  const trend = dv>0.01 ? '<span class="up">▲ in salita</span>' : dv<-0.01 ? '<span class="down">▼ in discesa</span>' : '→ stanca';
+  let near='';
+  if(askState){ const e = askState.ext.filter(x=>x.t>now).reduce((b,x)=>(!b||Math.abs(x.t-t)<Math.abs(b.t-t))?x:b, null); if(e && Math.abs(e.t-t)<6*3600e3){ const dm=Math.round((e.t-t)/60e3); near = ` · ${e.type} alle ${fmtT(new Date(e.t))} (${dm>=0?'fra '+dm:dm*-1+' min prima'}${dm>=0?' min':''})`; } }
+  out.innerHTML = `${whenTxt} alle ${fmtT(new Date(t))}: <b>${m(v)} m</b> ${trend}${near}<div class="d">${src}${src==='previsione'?', corretta con le letture':''}</div>`;
+}
+$('askTime').addEventListener('input', renderAsk);
+$('askNow').addEventListener('click', ()=>{ const n=new Date(Date.now()+3600e3); $('askTime').value = new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ}).format(n).replace('24:','00:'); renderAsk(); });
 
 /* ---------- calendario astronomico ---------- */
 function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
@@ -576,10 +643,11 @@ async function load(){
     $('status').textContent = `Aggiornato ${fmtT(new Date())}` + (fc?` · previsione Adriac del ${fmtD(fc.emission)}`:'');
   }
   try{ render(data); }catch(e){ errs.push('rendering: '+e.message); }
-  if(errs.length){ $('error').textContent='Alcune fonti non hanno risposto: '+errs.join(' · '); $('error').hidden=false; }
+  if(errs.length){ $('error').textContent='Fonti non raggiunte in questo aggiornamento: '+errs.map(e=>e.split(':')[0]).join(', ')+'.'; $('error').hidden=false; }
   $('refresh').disabled=false; busy=false;
 }
 $('refresh').addEventListener('click', load);
+$('chartToggle').addEventListener('click', ()=>{ chartDetails=!chartDetails; try{ localStorage.setItem('chart-details', chartDetails?'1':'0'); }catch(e){} if(lastData) render(lastData); });
 let lastData=null; const _render=render; render=function(d){ lastData=d; _render(d); };
 let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(lastData) try{ render(lastData); }catch(e){} }, 150); });
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) load(); });
