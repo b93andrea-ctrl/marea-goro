@@ -113,10 +113,12 @@ table.t td:first-child{font-family:var(--font);font-size:.9rem}
 .astro .day.today{border-color:var(--sea);box-shadow:inset 0 0 0 1px var(--sea)}
 .astro .e{display:grid;grid-template-columns:auto 1fr auto;align-items:baseline;gap:3px;font-size:.76rem;padding:3px 0;white-space:nowrap;border-top:1px dashed var(--line);min-width:0}
 .astro .e:first-of-type{border-top:0}
-.astro .e .k{color:var(--muted);width:4.2em;font-size:.6rem;letter-spacing:.5px}
-.astro .e b{text-align:left;overflow:hidden}
-.astro .e span:last-child{text-align:right;font-size:.7rem}
-.astro .day{padding:8px 8px}
+.astro .e .k{color:var(--muted);width:3.7em;font-size:.56rem;letter-spacing:.4px}
+.astro .e b{text-align:left;font-size:.84rem;font-variant-numeric:tabular-nums}
+.astro .e span:last-child{text-align:right;font-size:.66rem;font-variant-numeric:tabular-nums}
+.astro .day{padding:7px 7px}
+.astro .e{gap:2px}
+@media (max-width:360px){ .astro{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))} .astro .e b{font-size:.8rem} .astro .e span:last-child{font-size:.62rem} }
 .astro .e.alta .k{color:var(--sea)}
 .astro .e b{font-weight:600}
 .astro .e span:last-child{color:var(--muted)}
