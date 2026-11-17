@@ -56,17 +56,12 @@ button:focus-visible{outline:2px solid var(--sand)}
 .kpi .trend{font-size:.85rem;color:var(--muted);flex-basis:100%}
 .kpi .next{margin-left:auto;text-align:right;font-size:.82rem;color:var(--muted);line-height:1.4}
 .kpi .next b{font-family:var(--display);color:var(--fg);font-size:1.15rem;font-weight:500}
-svg.chart{width:100%;height:auto;display:block;touch-action:pan-y}
+svg.chart{width:100%;height:auto;display:block;touch-action:pan-y;cursor:crosshair;user-select:none;-webkit-user-select:none}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.75rem;color:var(--muted);padding:6px 4px 0}
 .chart-simple .legend .x{display:none}
 .legend .lnk{margin-left:auto;border:0;background:none;padding:2px 4px;color:var(--sea);font-size:.78rem;font-weight:600;text-decoration:underline}
 .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px;border-radius:2px}
-.ask{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;margin:12px 4px 4px;padding-top:10px;border-top:1px solid var(--line)}
-.ask label{font-family:var(--display);font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:2px;color:var(--sand)}
-.ask input[type=time]{font:inherit;font-family:var(--display);font-size:1.2rem;font-weight:400;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:6px 10px;min-width:0}
-.ask .ans{grid-column:1/-1;font-size:.92rem;line-height:1.4}
-.ask .ans b{font-family:var(--display);font-size:1.4rem;font-weight:400;color:var(--sea)}
-.ask .ans .up{color:var(--sea)} .ask .ans .down{color:var(--sand)}
+.hint{font-size:.78rem;color:var(--muted);margin:8px 4px 0;text-align:center}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
 .card.wide{grid-column:1/-1}
@@ -164,12 +159,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <span><i style="border-color:var(--crit)"></i>0,80 m</span>
     <button type="button" id="chartToggle" class="lnk" hidden>Più dettagli</button>
   </div>
-  <div class="ask">
-    <label for="askTime">A che ora?</label>
-    <input type="time" id="askTime" step="300">
-    <button type="button" id="askNow" title="Fra un'ora">+1 h</button>
-    <div class="ans" id="askAns">Scegli un orario per avere il livello stimato.</div>
-  </div>
+  <div class="hint">Tocca o trascina sul grafico per leggere ora e livello.</div>
 </section>
 
 <section class="grid" id="stats">
@@ -509,10 +499,57 @@ function drawChart(obs, fc, fcPrev, ext, nc, cf){
     g+=`<circle cx="${xx}" cy="${yy}" r="3.5" fill="var(--card)" stroke="var(--fc)" stroke-width="2"/>`;
     g+=`<text x="${xx}" y="${up?yy-9:yy+17}" font-size="11" text-anchor="middle" fill="var(--fg)" font-weight="600">${fmtT(new Date(e.t))}</text>`;
   }
-  svg.innerHTML = g;
+  svg.innerHTML = g + '<g id="cursor"></g>';
   document.body.classList.toggle('chart-simple', simple);
   const tb=$('chartToggle'); if(tb){ tb.hidden=!narrow; tb.textContent = chartDetails ? 'Meno dettagli' : 'Più dettagli'; }
+  chartGeom = { x, y, t0, t1, W, H, L, R, T, B, now, obs, nc, fcUse: cf ? fc.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : fc };
+  if(cursorT!=null) drawCursor(cursorT);
 }
+
+/* ---------- cursore sul grafico: trascina il dito per leggere il livello a un'ora qualsiasi ---------- */
+let chartGeom = null, cursorT = null;
+function levelAt(t){ // misurato → stima fino ad adesso → previsione corretta → astronomica
+  if(!chartGeom) return null;
+  const {obs, nc, fcUse, now} = chartGeom;
+  let v = obs.length ? interp(obs,t) : null, src='misurato';
+  if(v==null && nc && nc.series.length){ v = interp(nc.series,t); src='stima'; }
+  if(v==null && fcUse.length){ v = interp(fcUse,t); src='previsto'; }
+  if(v==null){ v = astro(t); src='astronomica'; }
+  return v==null ? null : {v, src};
+}
+function drawCursor(t){
+  const cg = $('cursor'); if(!cg||!chartGeom) return;
+  const {x, y, t0, t1, W, H, L, R, T, B} = chartGeom;
+  if(t==null){ cg.innerHTML=''; cursorBox=null; return; }
+  t = Math.min(t1, Math.max(t0, t));
+  const r = levelAt(t); if(!r){ cg.innerHTML=''; cursorBox=null; return; }
+  const xx = x(t), yy = y(r.v);
+  const bw = 118, bh = 46, flip = xx + 12 + bw > W - R;
+  const bx = flip ? xx - 12 - bw : xx + 12, by = T + 2;
+  cursorBox = {x:bx, y:by, w:bw, h:bh};
+  cg.innerHTML =
+    `<line x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}" stroke="var(--sea)" stroke-width="1.4" stroke-dasharray="3 3"/>`+
+    `<circle cx="${xx}" cy="${yy}" r="5" fill="var(--sea)" stroke="var(--card)" stroke-width="2"/>`+
+    `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="8" fill="var(--card)" stroke="var(--sea)" stroke-width="1"/>`+
+    `<text x="${bx+bw/2}" y="${by+15}" font-size="11" text-anchor="middle" fill="var(--muted)">${fmtD(new Date(t))} <tspan font-weight="600" fill="var(--fg)">${fmtT(new Date(t))}</tspan> · ${r.src}</text>`+
+    `<text x="${bx+bw/2}" y="${by+37}" font-size="19" text-anchor="middle" fill="var(--sea)" font-weight="500" font-family="var(--display)">${m(r.v)} m</text>`+
+    `<text x="${bx+bw-7}" y="${by+12}" font-size="10" text-anchor="end" fill="var(--muted)">✕</text>`;
+}
+let cursorBox = null; // rettangolo dell'etichetta (coordinate SVG): un tocco lì toglie il cursore
+(function(){
+  const svg = $('chart'); let drag=false;
+  const toSvg = ev => { const rc=svg.getBoundingClientRect(); return { px:(ev.clientX-rc.left)/rc.width*chartGeom.W, py:(ev.clientY-rc.top)/rc.height*chartGeom.H }; };
+  const tAt = px => { const {t0,t1,W,L,R}=chartGeom; return t0 + (Math.min(W-R,Math.max(L,px))-L)/(W-L-R)*(t1-t0); };
+  svg.addEventListener('pointerdown', ev=>{
+    if(!chartGeom) return;
+    const {px,py} = toSvg(ev);
+    if(cursorBox && px>=cursorBox.x && px<=cursorBox.x+cursorBox.w && py>=cursorBox.y && py<=cursorBox.y+cursorBox.h){ cursorT=null; drawCursor(null); return; }
+    drag=true; svg.setPointerCapture(ev.pointerId); cursorT=tAt(px); drawCursor(cursorT);
+  });
+  svg.addEventListener('pointermove', ev=>{ if(!drag||!chartGeom) return; cursorT=tAt(toSvg(ev).px); drawCursor(cursorT); ev.preventDefault(); });
+  const end = ()=>{ drag=false; };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+})();
 let chartDetails = false;
 try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
@@ -527,8 +564,6 @@ function render(data){
   const fcUse = cf ? fc.latest.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : fc.latest;
   const ext = extrema(fcUse, now-3600e3);
   drawChart(obs, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf);
-  askState = { fcUse, ext, nc };
-  renderAsk();
 
   if(last){
     const ago = Math.round((now-last.t)/60e3);
@@ -615,36 +650,6 @@ function render(data){
       `</table><div class="d">Letture delle ${fmtT(new Date(Math.max(...sacca.map(s=>s.t))))}. Mare aperto ≈ 35 ‰.</div>`;
   } else $('sacca').innerHTML='<div class="d">Dati non disponibili.</div>';
 }
-
-/* ---------- "A che ora?": livello stimato a un orario scelto ---------- */
-let askState = null;
-function nextOccurrence(hhmm){ // 'HH:MM' in ora italiana → prossimo istante futuro (oggi o domani)
-  const [h,mi]=hhmm.split(':').map(Number);
-  const base=romeDayStart(todayStr());
-  for(let d=0; d<3; d++){
-    const dayStart = d===0 ? base : romeDayStart(shiftDate(todayStr(), d));
-    const t = dayStart + (h*60+mi)*60e3;
-    if(t>Date.now()) return t;
-  }
-  return base+(h*60+mi)*60e3;
-}
-function renderAsk(){
-  const inp=$('askTime'), out=$('askAns');
-  if(!inp.value){ out.textContent='Scegli un orario per avere il livello stimato.'; return; }
-  const t=nextOccurrence(inp.value), now=Date.now();
-  const inDays = Math.round((t-romeDayStart(todayStr()))/86400e3 - 0.5);
-  const whenTxt = inDays<=0 ? 'oggi' : inDays===1 ? 'domani' : fmtD(new Date(t));
-  let v=null, src='';
-  if(askState && askState.fcUse.length){ v=interp(askState.fcUse,t); src='previsione'; }
-  if(v==null){ v=astro(t); src='marea astronomica, senza meteo'; }
-  const dv = (askState && askState.fcUse.length && interp(askState.fcUse,t+1800e3)!=null ? interp(askState.fcUse,t+1800e3) : astro(t+1800e3)) - v;
-  const trend = dv>0.01 ? '<span class="up">▲ in salita</span>' : dv<-0.01 ? '<span class="down">▼ in discesa</span>' : '→ stanca';
-  let near='';
-  if(askState){ const e = askState.ext.filter(x=>x.t>now).reduce((b,x)=>(!b||Math.abs(x.t-t)<Math.abs(b.t-t))?x:b, null); if(e && Math.abs(e.t-t)<6*3600e3){ const dm=Math.round((e.t-t)/60e3); near = ` · ${e.type} alle ${fmtT(new Date(e.t))} (${dm>=0?'fra '+dm:dm*-1+' min prima'}${dm>=0?' min':''})`; } }
-  out.innerHTML = `${whenTxt} alle ${fmtT(new Date(t))}: <b>${m(v)} m</b> ${trend}${near}<div class="d">${src}${src==='previsione'?', corretta con le letture':''}</div>`;
-}
-$('askTime').addEventListener('input', renderAsk);
-$('askNow').addEventListener('click', ()=>{ const n=new Date(Date.now()+3600e3); $('askTime').value = new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:TZ}).format(n).replace('24:','00:'); renderAsk(); });
 
 /* ---------- calendario astronomico ---------- */
 function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
