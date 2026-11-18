@@ -308,11 +308,15 @@ async function fetchForecast(){
   return { latest: conv(st.previsioni[keys[keys.length-1]]), prev: keys.length>1?conv(st.previsioni[keys[keys.length-2]]):[], emission: new Date(keys[keys.length-1]), updated: j._items[0]._updated };
 }
 async function fetchAlert(){ return getJSON(`${AM}o/get-stato-allerta`); }
+// allertameteo mette in cache l'intestazione CORS per URL con la prima origine che la chiede: un parametro in più
+// legato all'origine evita che una prova da localhost blocchi il sito pubblicato (e viceversa) per 5 minuti
+const AM_ORG = encodeURIComponent(location.hostname.replace(/[^a-z0-9]/gi,'').slice(0,16)||'x');
+const amSensor = (variabile, time) => `${AM}o/api/allerta/get-sensor-values-no-time?variabile=${variabile}&time=${time}&o=${AM_ORG}`;
 async function fetchOthers(){
   // ultima mezz'ora intera; se non ancora pubblicata, quella prima
   let slot = Math.floor(Date.now()/1800e3)*1800e3;
   for(let k=0;k<3;k++){
-    const j = await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=254,0,0/101,-,-,-/B22037&time=${slot}`);
+    const j = await getJSON(amSensor('254,0,0/101,-,-,-/B22037', slot));
     const rows = j.filter(x=>x.idstazione);
     if(rows.some(r=>r.value!=null)) return {time:slot, rows};
     slot -= 1800e3;
@@ -326,11 +330,11 @@ async function fetchMeteo(){
   const pick = (j, ids) => { for(const id of ids){ const r=(j||[]).find(x=>x.idstazione===id && x.value!=null); if(r) return r; } return null; };
   let slot = Math.floor(Date.now()/1800e3)*1800e3;
   for(let k=0;k<3;k++){
-    const [s,d,p] = await Promise.all([V.spd,V.dir,V.prs].map(v=>getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=${v}&time=${slot}`).catch(()=>null)));
+    const [s,d,p] = await Promise.all([V.spd,V.dir,V.prs].map(v=>getJSON(amSensor(v, slot)).catch(()=>null)));
     const spd=pick(s,['14387','12459']), dir=pick(d,['14387','12459']), prs=pick(p,['12459','14101']);
     if(spd||prs){
       let prs3=null;
-      if(prs){ try{ const p3=await getJSON(`${AM}o/api/allerta/get-sensor-values-no-time?variabile=${V.prs}&time=${slot-3*3600e3}`); prs3=pick(p3,[prs.idstazione]); }catch(e){} }
+      if(prs){ try{ const p3=await getJSON(amSensor(V.prs, slot-3*3600e3)); prs3=pick(p3,[prs.idstazione]); }catch(e){} }
       return { time:slot, spd: spd?{v:spd.value, st:spd.nomestaz}:null, dir: dir?dir.value:null, prs: prs?{v:prs.value/100, st:prs.nomestaz, d3: prs3?(prs.value-prs3.value)/100:null}:null };
     }
     slot -= 1800e3;
@@ -400,16 +404,21 @@ function astroExtrema(t0,t1){ return extrema(astroSeries(t0-3600e3,t1+3600e3,10)
 
 /* ---------- stima del livello attuale ----------
    Dall'ultima lettura in poi si segue la forma della previsione Adriac (o, in mancanza, della marea astronomica),
-   agganciata ai dati reali: scostamento = media (osservato − curva) sulle ultime 3 letture. Ogni nuova lettura ricalibra. */
+   agganciata ai dati reali: scostamento = media pesata (osservato − curva) sugli ultimi 30 min. Ogni nuova lettura ricalibra. */
 function nowcast(obs, fc, now){
   if(!obs.length) return null;
   const last = obs[obs.length-1];
   if(now-last.t > 2*3600e3) return null; // dato troppo vecchio per prolungarlo
   const curve = t => { const v = fc.length ? interp(fc,t) : null; return v!=null ? v : astro(t); };
-  // scostamento all'ultima lettura, più metà della sua tendenza negli ultimi 30 min (estrapolata al massimo per 30 min)
-  const off = last.v - curve(last.t);
-  const prev = obs.find(p=>p.t>=last.t-30*60e3-60e3 && p.t<last.t);
-  const dOff = prev ? (off - (prev.v - curve(prev.t))) / ((last.t-prev.t)/60e3) : 0; // m per minuto
+  // Il radar ha rumore di ±2-4 cm per lettura (18/11: mediana 1,7 cm, 90° percentile 3,8 cm). Lo scostamento si aggancia
+  // quindi alla media pesata delle letture degli ultimi 30 min (peso crescente verso l'ultima), non alla sola ultima;
+  // la sua tendenza viene dal confronto con la mezz'ora precedente, ed è estrapolata a metà per al massimo 30 min.
+  const recent = obs.filter(p=>p.t>=last.t-30*60e3 && p.t<=last.t);
+  let ws=0, so=0; recent.forEach((p,i)=>{ const w=i+1; ws+=w; so+=w*(p.v-curve(p.t)); });
+  const off = ws ? so/ws : last.v - curve(last.t);
+  const older = obs.filter(p=>p.t>=last.t-60*60e3 && p.t<last.t-30*60e3);
+  const offOld = older.length ? older.reduce((s,p)=>s+(p.v-curve(p.t)),0)/older.length : off;
+  const dOff = older.length ? (off-offOld)/30 : 0; // m per minuto
   const offAt = t => off + 0.5*dOff*Math.min((t-last.t)/60e3, 30);
   const est = t => curve(t) + offAt(t);
   const series=[]; for(let t=last.t; t<=now; t+=5*60e3) series.push({t, v:est(t)}); series.push({t:now, v:est(now)});
@@ -611,8 +620,10 @@ function render(data){
 
   if(last){
     const ago = Math.round((now-last.t)/60e3);
-    const prev = obs.find(p=>p.t>=last.t-30*60e3-60e3);
-    const dv = prev?last.v-prev.v:null;
+    // tendenza: media delle ultime 3 letture contro le 3 di mezz'ora prima (il radar ha rumore di qualche cm)
+    const avg = a => a.reduce((s,p)=>s+p.v,0)/a.length;
+    const rec = obs.filter(p=>p.t>last.t-25*60e3), old = obs.filter(p=>p.t>last.t-55*60e3 && p.t<=last.t-30*60e3);
+    const dv = (rec.length && old.length) ? avg(rec)-avg(old) : null;
     const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
     if(nc){
       $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">stima ${fmtT(new Date(now))}</em></small>`;

@@ -5,7 +5,7 @@ Pagina web installabile sul telefono (PWA). Legge direttamente i dati pubblici d
 ## Cosa mostra
 
 1. **Grafico marea** (prima schermata): osservato Porto Garibaldi delle ultime 24 h, previsione Adriac per le prossime 48 h, emissione del giorno prima in trasparenza, soglie regionali 0,70 e 0,80 m, linea "adesso", orari delle prossime alte e basse.
-2. **Livello attuale stimato**: Arpae pubblica ogni lettura con 20 minuti di ritardo, quindi l'app prolunga l'ultima lettura seguendo la forma della previsione Adriac (scostamento agganciato all'ultima lettura più metà della sua tendenza nei 30 minuti precedenti). Si ricalibra da sola a ogni nuova lettura. Sotto, in chiaro, l'ultima lettura ufficiale con la sua ora. Primo controllo 16/11 18:00: stima 0,07 m, reale 0,10 m, sola previsione −0,01 m.
+2. **Livello attuale stimato**: Arpae pubblica ogni lettura con 20 minuti di ritardo, quindi l'app prolunga l'ultima lettura seguendo la forma della previsione Adriac (scostamento = media pesata delle letture degli ultimi 30 minuti, perché il radar ha un rumore di 2-4 cm per lettura, più metà della sua tendenza rispetto alla mezz'ora precedente). Si ricalibra da sola a ogni nuova lettura. Sotto, in chiaro, l'ultima lettura ufficiale con la sua ora. Primo controllo 16/11 18:00: stima 0,07 m, reale 0,10 m, sola previsione −0,01 m.
 3. **Prossime alte e basse** previste (estremi della curva Adriac, filtrati sotto gli 8 cm di dislivello).
 4. **Scostamento meteo**: osservato meno previsione allo stesso istante.
 5. Massimi e minimi delle ultime 24 h osservate e delle prossime 48 h previste.
