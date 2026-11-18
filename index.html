@@ -72,6 +72,25 @@ svg.chart{width:100%;height:auto;display:block;touch-action:pan-y;cursor:crossha
 .card .v{font-family:var(--display);font-size:1.9rem;font-weight:300;line-height:1;color:var(--fg)}
 .card .v small{font-family:var(--font);font-size:.85rem;color:var(--muted);font-weight:500}
 .card .d{font-size:.8rem;color:var(--muted);margin-top:4px}
+details.shy summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+details.shy summary::-webkit-details-marker{display:none}
+details.shy summary .h{font-family:var(--display);font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--sand);font-weight:500}
+details.shy summary .h::before{content:'▸ ';}
+details.shy[open] summary .h::before{content:'▾ ';}
+details.shy summary .pv{font-size:.82rem;color:var(--muted)}
+details.shy[open] summary{margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.shyctl{display:flex;gap:6px;align-items:center;margin:4px 0 6px}
+.shyctl button{padding:8px 12px;font-size:1.05rem;line-height:1}
+.shyctl input[type=range]{flex:1;min-width:0;accent-color:var(--sea)}
+.shywhen{font-family:var(--display);font-size:1.05rem;font-weight:500;text-align:center;margin-bottom:6px}
+.shymap{position:relative;border-radius:10px;overflow:hidden;background:#d9dde3}
+.shymap img{width:100%;display:block;aspect-ratio:2100/1644}
+.shymap .mk{position:absolute;transform:translate(-50%,-50%);font-size:.66rem;font-weight:600;color:#0f2a5a;text-shadow:0 0 3px #fff,0 0 3px #fff;white-space:nowrap}
+.shymap .mk i{display:block;width:8px;height:8px;border-radius:50%;background:#0f2a5a;border:2px solid #fff;margin:0 auto 1px}
+#shyTable td:first-child{white-space:normal;font-weight:500} #shyTable td:first-child b{font-weight:600}
+.shyleg{display:flex;flex-wrap:wrap;gap:4px 8px;margin:8px 0 10px;font-size:.66rem;color:var(--muted)}
+.shyleg span{display:inline-flex;align-items:center;gap:3px}
+.shyleg i{display:inline-block;width:12px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
 .meteo{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
 .meteo .mv{font-family:var(--display);font-size:1.25rem;font-weight:400;color:var(--fg);line-height:1.2}
 .meteo .mv small{font-family:var(--font);font-size:.75rem;color:var(--muted);font-weight:500}
@@ -170,6 +189,21 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <div class="extrema" id="extrema"></div>
     <div class="d">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
   </div>
+
+  <details class="card wide shy" id="shyBox">
+    <summary><span class="h">Sacca di Goro · modello Shyfer e stima</span><span class="pv" id="shySummary">apri per la mappa e la stima a Goro</span></summary>
+    <div class="shyctl">
+      <button type="button" id="shyPrev" aria-label="Ora precedente">‹</button>
+      <input type="range" id="shySlider" min="0" max="71" value="0" aria-label="Ora della mappa">
+      <button type="button" id="shyNext" aria-label="Ora successiva">›</button>
+      <button type="button" id="shyNow">Adesso</button>
+    </div>
+    <div class="shywhen" id="shyWhen">–</div>
+    <div class="shymap"><img id="shyImg" alt="Mappa Shyfer del livello nella Sacca di Goro" crossorigin="anonymous"><span class="mk" style="left:31.4%;top:21.3%"><i></i>Goro</span><span class="mk" style="left:52.9%;top:38.9%"><i></i>Gorino</span><span class="mk" style="left:50%;top:70%"><i></i>Bocca</span></div>
+    <div class="shyleg" id="shyLeg"></div>
+    <table class="t" id="shyTable"></table>
+    <div class="d" id="shyNote"></div>
+  </details>
 
   <div class="card wide">
     <h2>Marea astronomica · calendario</h2>
@@ -302,6 +336,14 @@ async function fetchMeteo(){
     slot -= 1800e3;
   }
   return null;
+}
+async function fetchShyfer(){
+  // mappe orarie del modello Shyfer (SHYFEM) sulla Sacca: 72 PNG per emissione, colori a scatti di 0,2 m
+  const j = await getJSON(`${A}meteo_mappe_mare_previsione_livello_mare_sacca_shyfer?sort=-_id&max_results=1`);
+  const it = j._items && j._items[0]; if(!it) return null;
+  const legend = (it.legenda||[]).map(l=>{ const mm=l.nome.match(/^(-?[\d.]+)-(-?[\d.]+)$/); return mm?{lo:+mm[1], hi:+mm[2], color:l.colore.toLowerCase()}:null; }).filter(Boolean);
+  const maps = (it.mappe||[]).map(m=>({ t:new Date(m.data_validita).getTime(), url:`${A.replace(/\/$/,'')}${m.mappa.file.file}` })).sort((a,b)=>a.t-b.t);
+  return { emission:new Date(it.data_emissione), legend, maps };
 }
 async function fetchSacca(){
   const ids = {'53145':'Bocca Scanno','53144':'Gorino','53143':'Punta Volano'};
@@ -557,7 +599,7 @@ try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
-  const {obs, fc, alert, others, sacca, meteo} = data;
+  const {obs, fc, alert, others, sacca, meteo, shyfer} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
   const nc = nowcast(obs, fc.latest, now);
@@ -644,6 +686,8 @@ function render(data){
       others.rows.map(r=>`<tr><td>${name(r.nomestaz)}</td><td>${r.value==null?'–':m(r.value)+'<span class="u">m</span>'}</td></tr>`).join('') +
       `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}.</div>`;
   }
+  // Shyfer
+  shyState.data = shyfer || null; shyState.ext = ext; renderShyfer();
   // sacca
   if(sacca&&sacca.length){
     const n1 = v => v==null?'–':v.toFixed(1).replace('.',',');
@@ -652,6 +696,86 @@ function render(data){
       `</table><div class="d">Letture delle ${fmtT(new Date(Math.max(...sacca.map(s=>s.t))))}. Mare aperto ≈ 35 ‰.</div>`;
   } else $('sacca').innerHTML='<div class="d">Dati non disponibili.</div>';
 }
+
+/* ---------- Sacca di Goro: mappe Shyfer + stima ibrida ----------
+   Shyfer (SHYFEM, CNR-ISMAR, fatto girare da Arpae) dà il livello dentro la Sacca a colori con scatti di 0,2 m,
+   partendo dalla previsione Adriac al bordo (senza le nostre correzioni). Dalle 72 mappe del 18/11/2026 il punto di
+   Goro segue il mare aperto con un ritardo fino a un'ora e nessuno smorzamento visibile a questa risoluzione.
+   Stima ibrida: la nostra curva di Porto Garibaldi (misurato + previsione corretta) spostata avanti di GORO_LAG;
+   accanto, il livello Shyfer letto dai pixel della mappa nei tre punti, per confronto. */
+const GORO_LAG = 45*60e3;
+const SHY_PTS = [ {k:'Goro', x:660, y:350}, {k:'Gorino', x:1110, y:640}, {k:'Bocca', x:1050, y:1150} ]; // pixel sulla mappa 2100×1644
+let shyState = { data:null, ext:[], idx:null, loading:null };
+function shyBin(data, px, py, imgData, W){
+  const cnt = {};
+  for(let dy=-15; dy<=15; dy+=3) for(let dx=-15; dx<=15; dx+=3){
+    const i = ((py+dy)*W + (px+dx))*4; if(imgData[i+3]<128) continue;
+    const h = '#'+[imgData[i],imgData[i+1],imgData[i+2]].map(v=>v.toString(16).padStart(2,'0')).join('');
+    cnt[h]=(cnt[h]||0)+1;
+  }
+  let best=null; for(const h in cnt) if(!best||cnt[h]>cnt[best]) best=h;
+  if(!best) return null;
+  // colore più vicino nella legenda (tolleranza per l'antialias)
+  const rgb = h => [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+  const b = rgb(best); let bin=null, bd=1e9;
+  for(const l of data.legend){ const c=rgb(l.color); const d=(c[0]-b[0])**2+(c[1]-b[1])**2+(c[2]-b[2])**2; if(d<bd){bd=d;bin=l;} }
+  return bd<900 ? bin : null;
+}
+function goroEstimate(t){ // nostra curva di Porto Garibaldi spostata del ritardo
+  if(!chartGeom) return null;
+  const r = levelAt(t-GORO_LAG); return r;
+}
+function renderShyfer(){
+  const d = shyState.data, box = $('shyBox');
+  if(!d || !d.maps.length){ $('shySummary').textContent='modello non disponibile al momento'; $('shyTable').innerHTML=''; $('shyNote').textContent=''; return; }
+  const now = Date.now();
+  const sl = $('shySlider'); sl.max = d.maps.length-1;
+  let nowIdx = d.maps.findIndex(m=>m.t>=now-1800e3); if(nowIdx<0) nowIdx=d.maps.length-1;
+  if(shyState.idx==null || shyState.idx>=d.maps.length) shyState.idx = nowIdx;
+  $('shyLeg').innerHTML = d.legend.map(l=>`<span><i style="background:${l.color}"></i>${l.lo.toFixed(1).replace('.',',')}…${l.hi.toFixed(1).replace('.',',')}</span>`).join('');
+  const g = goroEstimate(now);
+  $('shySummary').textContent = g ? `stima a Goro adesso ${m(g.v)} m · emissione del ${fmtD(d.emission)}` : `emissione del ${fmtD(d.emission)}`;
+  showShyMap(shyState.idx);
+}
+function showShyMap(i){
+  const d = shyState.data; if(!d) return;
+  i = Math.max(0, Math.min(d.maps.length-1, i)); shyState.idx = i;
+  const mp = d.maps[i]; $('shySlider').value = i;
+  $('shyWhen').textContent = `${fmtD(new Date(mp.t))} ore ${fmtT(new Date(mp.t))}`;
+  const g = goroEstimate(mp.t);
+  const rowEst = g ? `<tr><td><b>Goro · stima</b> (nostra curva +45 min)</td><td>${m(g.v)}<span class="u">m</span></td></tr>` : '';
+  $('shyTable').innerHTML = `<tr><th>Punto</th><th>Livello</th></tr>${rowEst}<tr><td colspan="2" class="d">lettura mappa in corso…</td></tr>`;
+  if(!$('shyBox').open){ shyState.loading=null; return; } // la mappa si scarica solo a scheda aperta
+  const img = $('shyImg'); img.src = mp.url;
+  const token = shyState.loading = {};
+  img.onload = () => {
+    if(shyState.loading!==token) return;
+    let rows = '';
+    try{
+      const c = document.createElement('canvas'); c.width=img.naturalWidth; c.height=img.naturalHeight;
+      const ctx = c.getContext('2d', {willReadFrequently:true}); ctx.drawImage(img,0,0);
+      const px = ctx.getImageData(0,0,c.width,c.height).data;
+      const sx = c.width/2100, sy = c.height/1644;
+      let goroBin=null;
+      for(const p of SHY_PTS){
+        const bin = shyBin(d, Math.round(p.x*sx), Math.round(p.y*sy), px, c.width);
+        if(p.k==='Goro') goroBin=bin;
+        const f1 = v => (v>=0?'+':'−')+Math.abs(v).toFixed(1).replace('.',',');
+        rows += `<tr><td>${p.k} · Shyfer</td><td>${bin?`${f1(bin.lo)}…${f1(bin.hi)}<span class="u">m</span>`:'–'}</td></tr>`;
+      }
+      let note = 'Shyfer: colori a scatti di 0,2 m, dalla previsione Adriac senza correzioni. Stima: Porto Garibaldi misurato e corretto, spostato di 45 minuti (ritardo visto nelle mappe).';
+      if(g && goroBin){ const inside = g.v>=goroBin.lo-0.05 && g.v<=goroBin.hi+0.05; note = (inside?'Le due fonti concordano. ':'Le due fonti divergono: pesa di più la stima, che include le letture reali. ') + note; }
+      $('shyNote').textContent = note;
+    }catch(e){ rows = `<tr><td colspan="2" class="d">Mappa non leggibile (${e.message}).</td></tr>`; }
+    $('shyTable').innerHTML = `<tr><th>Punto</th><th>Livello</th></tr>${rowEst}${rows}`;
+  };
+  img.onerror = () => { if(shyState.loading===token) $('shyTable').innerHTML = `<tr><th>Punto</th><th>Livello</th></tr>${rowEst}<tr><td colspan="2" class="d">Mappa non raggiungibile.</td></tr>`; };
+}
+$('shySlider').addEventListener('input', e=>showShyMap(+e.target.value));
+$('shyPrev').addEventListener('click', ()=>showShyMap(shyState.idx-1));
+$('shyNext').addEventListener('click', ()=>showShyMap(shyState.idx+1));
+$('shyNow').addEventListener('click', ()=>{ shyState.idx=null; renderShyfer(); });
+$('shyBox').addEventListener('toggle', ()=>{ if($('shyBox').open && shyState.data) showShyMap(shyState.idx==null?0:shyState.idx); });
 
 /* ---------- calendario astronomico ---------- */
 function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
@@ -690,11 +814,11 @@ async function load(){
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, others, sacca, meteo] = await Promise.all([
+  const [obs, fc, alert, others, sacca, meteo, shyfer] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca'), safe(fetchMeteo(),'vento e pressione')
+    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca'), safe(fetchMeteo(),'vento e pressione'), safe(fetchShyfer(),'Shyfer')
   ]);
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca, meteo};
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca, meteo, shyfer};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
