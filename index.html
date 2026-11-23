@@ -248,7 +248,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </div>
 
   <div class="card half">
-    <h2>Mareografi costa (sensore a pressione)</h2>
+    <h2>Mareografi costa</h2>
     <div id="others"></div>
   </div>
 
@@ -311,7 +311,10 @@ async function fetchAlert(){ return getJSON(`${AM}o/get-stato-allerta`); }
 // allertameteo mette in cache l'intestazione CORS per URL con la prima origine che la chiede: un parametro in più
 // legato all'origine evita che una prova da localhost blocchi il sito pubblicato (e viceversa) per 5 minuti
 const AM_ORG = encodeURIComponent(location.hostname.replace(/[^a-z0-9]/gi,'').slice(0,16)||'x');
-const amSensor = (variabile, time) => `${AM}o/api/allerta/get-sensor-values-no-time?variabile=${variabile}&time=${time}&o=${AM_ORG}`;
+// il parametro time di allertameteo è l'ora ITALIANA scritta come se fosse UTC (verificato il 23/11/2026 confrontando
+// con il radar Arpae: con l'epoch UTC vero tornavano le letture di un'ora prima). Quindi sommo lo scarto di fuso.
+const romeOffset = t => { const p=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(t)); const g=k=>+p.find(x=>x.type===k).value; return Date.UTC(g('year'),g('month')-1,g('day'),g('hour')%24,g('minute')) - Math.floor(t/60e3)*60e3; };
+const amSensor = (variabile, time) => `${AM}o/api/allerta/get-sensor-values-no-time?variabile=${variabile}&time=${time+romeOffset(time)}&o=${AM_ORG}`;
 async function fetchOthers(){
   // ultima mezz'ora intera; se non ancora pubblicata, quella prima
   let slot = Math.floor(Date.now()/1800e3)*1800e3;
@@ -695,7 +698,7 @@ function render(data){
     const name = s => s.replace(' Porto','');
     $('others').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Livello</th></tr>` +
       others.rows.map(r=>`<tr><td>${name(r.nomestaz)}</td><td>${r.value==null?'–':m(r.value)+'<span class="u">m</span>'}</td></tr>`).join('') +
-      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}.</div>`;
+      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}. Porto Garibaldi è lo stesso mareografo del numero grande.</div>`;
   }
   // Shyfer
   shyState.data = shyfer || null; shyState.ext = ext; renderShyfer();
