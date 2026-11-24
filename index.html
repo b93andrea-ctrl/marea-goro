@@ -187,10 +187,14 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
 /* riga di stato sotto l'intestazione */
 .strip{display:flex;gap:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;align-items:center;justify-content:center;width:100%;border:0;background:none;margin:-2px 0 0;padding:12px 4px;font:inherit;font-size:.72rem;color:var(--muted);text-align:left;cursor:pointer;border-radius:0}
 .strip::-webkit-scrollbar{display:none}
-header{margin-bottom:0}
+header{margin-bottom:14px}
 .strip{margin:12px 0;padding:9px 10px;gap:10px;font-size:.7rem;background:var(--card);border:1px solid var(--line);border-radius:999px}
 .strip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--line);display:inline-block;flex:none}
+/* avviso di scostamento accanto al numero grande: compare solo quando conta (≥ 8 cm) */
+.chip{display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:5px 11px;border-radius:999px;font-size:.76rem;font-weight:600;background:var(--sand-soft);color:var(--sand);border:1px solid var(--sand)}
+.chip.crit{background:#c0392b14;color:var(--crit);border-color:var(--crit)}
+.chip::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
 .dot.green{background:#2e9e5b}.dot.yellow{background:var(--warn)}.dot.orange{background:#e67e22}.dot.red{background:var(--crit)}
 /* schede: una sola visibile, scelta dalla barra in basso */
 .tab{display:none} .tab>.hero,.tab>.grid:first-child{margin-top:0}
@@ -219,7 +223,7 @@ body{padding-bottom:76px}
   </div>
 </header>
 
-<button type="button" class="strip" id="strip" aria-label="Allerta, scostamento e vento: apri la scheda Meteo"><span id="stripAlert"><i class="dot"></i>allerta…</span><span id="stripSurge"><i class="dot"></i>mare…</span><span id="stripWind"><i class="dot"></i>vento…</span></button>
+<button type="button" class="strip" id="strip" hidden aria-label="Allerta, scostamento e vento: apri la scheda Meteo"><span id="stripAlert"><i class="dot"></i>allerta…</span><span id="stripSurge"><i class="dot"></i>mare…</span><span id="stripWind"><i class="dot"></i>vento…</span></button>
 
 <main>
 <section class="tab" data-tab="marea">
@@ -227,6 +231,7 @@ body{padding-bottom:76px}
   <div class="kpi">
     <div class="big" id="levelNow">–<small> m</small></div>
     <div class="trend" id="trend"></div>
+    <div class="chip" id="surgeChip" hidden></div>
     <div class="next" id="nextExt"></div>
   </div>
   <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Livello del mare osservato e previsto"></svg>
@@ -1006,7 +1011,10 @@ function render(data){
   if(last){
     const f = interp(fc.latest,last.t) ?? interp(fc.prev,last.t);
     if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
-      $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`; }
+      $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`;
+      const chip=$('surgeChip'); const big=Math.abs(s)>=0.08;
+      chip.hidden=!big; if(big){ chip.className='chip'+(Math.abs(s)>0.15?' crit':''); chip.textContent=`mare ${Math.round(Math.abs(s)*100)} cm ${s>0?'sopra':'sotto'} la previsione`; } }
+    else $('surgeChip').hidden=true;
   }
   // 24h osservato
   const o24 = obs.filter(p=>p.t>=now-24*3600e3);

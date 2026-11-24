@@ -4,7 +4,7 @@ Pagina web installabile sul telefono (PWA). Legge direttamente i dati pubblici d
 
 ## Struttura (dal 24/11/2026)
 
-Quattro schede scelte dalla barra fissa in basso (onda, pesce, vento, fiume), una sola pagina senza ricaricamenti; l'ultima scheda aperta viene ricordata (`localStorage` `tab`). Sotto l'intestazione una **riga di stato** sempre visibile, cliccabile verso Meteo: allerta (colore peggiore tra mareggiate, stato del mare, vento, piene), scostamento del mare dalla previsione, vento misurato.
+Quattro schede scelte dalla barra fissa in basso (onda, pesce, vento, fiume), una sola pagina senza ricaricamenti; l'ultima scheda aperta viene ricordata (`localStorage` `tab`). Sotto il numero grande compare una pillola "mare X cm sopra/sotto la previsione" solo quando lo scostamento è ≥ 8 cm (rossa oltre 15). La riga di stato sotto l'intestazione (allerta, scostamento, vento) è presente nel codice ma nascosta dal 24/11/2026 su richiesta: si riattiva togliendo `hidden` al pulsante `#strip`.
 
 - **Marea**: numero grande con stima, grafico col cursore, prossime alte e basse, ultime 24 h, prossime 48 h.
 - **Pesca**: orari di pesca 7 giorni (con la riga "prossima finestra"), Sacca di Goro · Shyfer e stima (chiusa), calendario astronomico, acqua nella Sacca.
