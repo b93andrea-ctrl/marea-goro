@@ -91,6 +91,11 @@ details.shy[open] summary{margin-bottom:10px;padding-bottom:6px;border-bottom:1p
 .shyleg{display:flex;flex-wrap:wrap;gap:4px 8px;margin:8px 0 10px;font-size:.66rem;color:var(--muted)}
 .shyleg span{display:inline-flex;align-items:center;gap:3px}
 .shyleg i{display:inline-block;width:12px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
+.windyctl{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.windyctl button{padding:6px 10px;font-size:.78rem;border-radius:999px}
+.windyctl button.on{background:var(--sea);color:#fff;border-color:var(--sea)}
+.windy{position:relative;border-radius:10px;overflow:hidden;background:var(--line);aspect-ratio:4/5;max-height:70vh}
+.windy iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .meteo{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
 .meteo .mv{font-family:var(--display);font-size:1.25rem;font-weight:400;color:var(--fg);line-height:1.2}
 .meteo .mv small{font-family:var(--font);font-size:.75rem;color:var(--muted);font-weight:500}
@@ -214,16 +219,28 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
       <button type="button" id="astroToday">Oggi</button>
     </div>
     <div id="astroCal" class="astro"></div>
-    <div class="d">Solo luna e sole, senza meteo: per domani fidati del grafico.</div>
+    <div class="d">Solo luna e sole, senza meteo.</div>
   </div>
 
   <div class="card wide">
     <h2>Scostamento meteo</h2>
     <div class="v" id="surge">–</div>
-    <div class="d">Quanto il mare reale sta sopra (+) o sotto (−) la previsione.</div>
     <div class="d" id="surgeCorr"></div>
     <div class="twocol meteo" id="meteo"></div>
   </div>
+
+  <details class="card wide shy" id="windyBox">
+    <summary><span class="h">Mappa del vento in movimento</span><span class="pv">apri per la mappa animata di Windy (modello ECMWF) centrata sulla Sacca</span></summary>
+    <div class="windyctl">
+      <button type="button" data-ov="wind" class="on">Vento</button>
+      <button type="button" data-ov="gust">Raffiche</button>
+      <button type="button" data-ov="waves">Onde</button>
+      <button type="button" data-ov="pressure">Pressione</button>
+      <button type="button" data-ov="rain">Pioggia</button>
+    </div>
+    <div class="windy"><iframe id="windyFrame" title="Mappa del vento Windy" loading="lazy" allowfullscreen></iframe></div>
+    <div class="d">Mappa e dati di Windy.com.</div>
+  </details>
 
   <div class="card wide">
     <h2>Ultime 24 ore osservate</h2>
@@ -262,7 +279,7 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
 
 <div id="error" class="err" hidden></div>
 <p class="note">
-Dati Arpae Emilia-Romagna e Protezione civile ER. Livelli sullo zero Arpae, orari italiani. Il mareografo di Porto Garibaldi è il più vicino a Goro; Arpae pubblica ogni lettura con circa 20 minuti di ritardo.
+Dati Arpae Emilia-Romagna e Protezione civile ER. Livelli sullo zero Arpae, orari italiani.
 </p>
 
 <script>
@@ -315,34 +332,35 @@ const AM_ORG = encodeURIComponent(location.hostname.replace(/[^a-z0-9]/gi,'').sl
 // con il radar Arpae: con l'epoch UTC vero tornavano le letture di un'ora prima). Quindi sommo lo scarto di fuso.
 const romeOffset = t => { const p=new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour12:false,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(t)); const g=k=>+p.find(x=>x.type===k).value; return Date.UTC(g('year'),g('month')-1,g('day'),g('hour')%24,g('minute')) - Math.floor(t/60e3)*60e3; };
 const amSensor = (variabile, time) => `${AM}o/api/allerta/get-sensor-values-no-time?variabile=${variabile}&time=${time+romeOffset(time)}&o=${AM_ORG}`;
-async function fetchOthers(){
-  // ultima mezz'ora intera; se non ancora pubblicata, quella prima
-  let slot = Math.floor(Date.now()/1800e3)*1800e3;
-  for(let k=0;k<3;k++){
-    const j = await getJSON(amSensor('254,0,0/101,-,-,-/B22037', slot));
-    const rows = j.filter(x=>x.idstazione);
-    if(rows.some(r=>r.value!=null)) return {time:slot, rows};
-    slot -= 1800e3;
-  }
-  return null;
-}
-async function fetchMeteo(){
-  // vento a Porto Garibaldi (14387, anemometro a 10 m) e pressione a Guagnino/Comacchio (12459, la più vicina con barometro);
-  // stesso endpoint dei mareografi, valori istantanei alla mezz'ora
-  const V = { spd:'254,0,0/103,10000,-,-/B11002', dir:'254,0,0/103,10000,-,-/B11001', prs:'254,0,0/1,-,-,-/B10004' };
+async function fetchAllertameteo(){
+  // Un solo giro per l'ultima mezz'ora pubblicata: livello dei mareografi (B22037), vento a Porto Garibaldi (14387,
+  // anemometro a 10 m: velocità B11002 e direzione B11001) e pressione a Guagnino/Comacchio (12459, B10004).
+  // Quattro richieste in parallelo; se la mezz'ora non è ancora pubblicata, si prova quella prima (al massimo tre).
+  // La tendenza della pressione a 3 ore viene dalle letture salvate sul telefono agli aggiornamenti precedenti.
+  const V = { lvl:'254,0,0/101,-,-,-/B22037', spd:'254,0,0/103,10000,-,-/B11002', dir:'254,0,0/103,10000,-,-/B11001', prs:'254,0,0/1,-,-,-/B10004' };
   const pick = (j, ids) => { for(const id of ids){ const r=(j||[]).find(x=>x.idstazione===id && x.value!=null); if(r) return r; } return null; };
   let slot = Math.floor(Date.now()/1800e3)*1800e3;
   for(let k=0;k<3;k++){
-    const [s,d,p] = await Promise.all([V.spd,V.dir,V.prs].map(v=>getJSON(amSensor(v, slot)).catch(()=>null)));
+    const [l,s,d,p] = await Promise.all([V.lvl,V.spd,V.dir,V.prs].map(v=>getJSON(amSensor(v, slot)).catch(()=>null)));
+    const rows = (l||[]).filter(x=>x.idstazione && x.value!=null);
     const spd=pick(s,['14387','12459']), dir=pick(d,['14387','12459']), prs=pick(p,['12459','14101']);
-    if(spd||prs){
-      let prs3=null;
-      if(prs){ try{ const p3=await getJSON(amSensor(V.prs, slot-3*3600e3)); prs3=pick(p3,[prs.idstazione]); }catch(e){} }
-      return { time:slot, spd: spd?{v:spd.value, st:spd.nomestaz}:null, dir: dir?dir.value:null, prs: prs?{v:prs.value/100, st:prs.nomestaz, d3: prs3?(prs.value-prs3.value)/100:null}:null };
+    if(rows.length || spd || prs){
+      let d3=null;
+      if(prs){
+        let hist=[]; try{ hist=JSON.parse(localStorage.getItem('prs-hist')||'[]'); }catch(e){}
+        hist = hist.filter(h=>h.t>slot-7*3600e3 && h.t!==slot); hist.push({t:slot, v:prs.value}); hist.sort((a,b)=>a.t-b.t);
+        try{ localStorage.setItem('prs-hist', JSON.stringify(hist)); }catch(e){}
+        const old = hist.filter(h=>Math.abs(h.t-(slot-3*3600e3))<=1800e3).sort((a,b)=>Math.abs(a.t-(slot-3*3600e3))-Math.abs(b.t-(slot-3*3600e3)))[0];
+        if(old) d3 = (prs.value-old.v)/100;
+      }
+      return {
+        others: rows.length ? {time:slot, rows} : null,
+        meteo: (spd||prs) ? { time:slot, spd: spd?{v:spd.value, st:spd.nomestaz}:null, dir: dir?dir.value:null, prs: prs?{v:prs.value/100, st:prs.nomestaz, d3}:null } : null
+      };
     }
     slot -= 1800e3;
   }
-  return null;
+  return { others:null, meteo:null };
 }
 async function fetchShyfer(){
   // mappe orarie del modello Shyfer (SHYFEM) sulla Sacca: 72 PNG per emissione, colori a scatti di 0,2 m
@@ -353,6 +371,8 @@ async function fetchShyfer(){
   return { emission:new Date(it.data_emissione), legend, maps };
 }
 async function fetchSacca(){
+  // dato orario: se quello salvato ha meno di 50 minuti lo riuso senza chiedere (3 richieste in meno per aggiornamento)
+  try{ const c=JSON.parse(localStorage.getItem('sacca-cache')||'null'); if(c && Date.now()-c.at<50*60e3 && c.data && c.data.length) return c.data; }catch(e){}
   const ids = {'53145':'Bocca Scanno','53144':'Gorino','53143':'Punta Volano'};
   const out = [];
   await Promise.all(Object.keys(ids).map(async id=>{
@@ -365,7 +385,9 @@ async function fetchSacca(){
         out.push({name:ids[id], t, sal:r.salinita_istantanea, temp:r.temperatura_acqua_mare, ox:r.ossigeno_disciolto}); break; } }
     }catch(e){}
   }));
-  return out.sort((a,b)=>a.name.localeCompare(b.name));
+  out.sort((a,b)=>a.name.localeCompare(b.name));
+  if(out.length){ try{ localStorage.setItem('sacca-cache', JSON.stringify({at:Date.now(), data:out})); }catch(e){} }
+  return out;
 }
 
 /* ---------- marea astronomica ----------
@@ -698,10 +720,10 @@ function render(data){
     const name = s => s.replace(' Porto','');
     $('others').innerHTML = `<table class="t"><tr><th>Stazione</th><th>Livello</th></tr>` +
       others.rows.map(r=>`<tr><td>${name(r.nomestaz)}</td><td>${r.value==null?'–':m(r.value)+'<span class="u">m</span>'}</td></tr>`).join('') +
-      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}. Porto Garibaldi è lo stesso mareografo del numero grande.</div>`;
+      `</table><div class="d">Letture delle ${fmtT(new Date(others.time))}.</div>`;
   }
   // Shyfer
-  shyState.data = shyfer || null; shyState.ext = ext; renderShyfer();
+  shyState.ext = ext; renderShyfer();
   // sacca
   if(sacca&&sacca.length){
     const n1 = v => v==null?'–':v.toFixed(1).replace('.',',');
@@ -740,9 +762,12 @@ function goroEstimate(t){ // nostra curva di Porto Garibaldi spostata del ritard
   const r = levelAt(t-GORO_LAG); return r;
 }
 function renderShyfer(){
-  const d = shyState.data, box = $('shyBox');
-  if(!d || !d.maps.length){ $('shySummary').textContent='modello non disponibile al momento'; $('shyTable').innerHTML=''; $('shyNote').textContent=''; return; }
-  const now = Date.now();
+  const d = shyState.data, now = Date.now();
+  if(!d || !d.maps.length){
+    const g = goroEstimate(now);
+    $('shySummary').textContent = (g ? `stima a Goro adesso ${m(g.v)} m · ` : '') + (shyState.failed ? 'modello non raggiungibile al momento' : 'apri per la mappa del modello');
+    $('shyTable').innerHTML=''; $('shyNote').textContent=''; return;
+  }
   const sl = $('shySlider'); sl.max = d.maps.length-1;
   let nowIdx = d.maps.findIndex(m=>m.t>=now-1800e3); if(nowIdx<0) nowIdx=d.maps.length-1;
   if(shyState.idx==null || shyState.idx>=d.maps.length) shyState.idx = nowIdx;
@@ -777,8 +802,8 @@ function showShyMap(i){
         const f1 = v => (v>=0?'+':'−')+Math.abs(v).toFixed(1).replace('.',',');
         rows += `<tr><td>${p.k} · Shyfer</td><td>${bin?`${f1(bin.lo)}…${f1(bin.hi)}<span class="u">m</span>`:'–'}</td></tr>`;
       }
-      let note = 'Shyfer: colori a scatti di 0,2 m, dalla previsione Adriac senza correzioni. Stima: Porto Garibaldi misurato e corretto, spostato di 45 minuti (ritardo visto nelle mappe).';
-      if(g && goroBin){ const inside = g.v>=goroBin.lo-0.05 && g.v<=goroBin.hi+0.05; note = (inside?'Le due fonti concordano. ':'Le due fonti divergono: pesa di più la stima, che include le letture reali. ') + note; }
+      let note = 'Shyfer: scatti di 0,2 m, senza le nostre correzioni. Stima: Porto Garibaldi corretto, +45 min.';
+      if(g && goroBin){ const inside = g.v>=goroBin.lo-0.05 && g.v<=goroBin.hi+0.05; note = (inside?'Le due fonti concordano. ':'Le due fonti divergono: pesa di più la stima. ') + note; }
       $('shyNote').textContent = note;
     }catch(e){ rows = `<tr><td colspan="2" class="d">Mappa non leggibile (${e.message}).</td></tr>`; }
     $('shyTable').innerHTML = `<tr><th>Punto</th><th>Livello</th></tr>${rowEst}${rows}`;
@@ -789,7 +814,25 @@ $('shySlider').addEventListener('input', e=>showShyMap(+e.target.value));
 $('shyPrev').addEventListener('click', ()=>showShyMap(shyState.idx-1));
 $('shyNext').addEventListener('click', ()=>showShyMap(shyState.idx+1));
 $('shyNow').addEventListener('click', ()=>{ shyState.idx=null; renderShyfer(); });
-$('shyBox').addEventListener('toggle', ()=>{ if($('shyBox').open && shyState.data) showShyMap(shyState.idx==null?0:shyState.idx); });
+$('shyBox').addEventListener('toggle', async ()=>{
+  if(!$('shyBox').open) return;
+  if(!shyState.data){ // primo accesso: scarica il catalogo delle mappe (una richiesta), poi rendi
+    $('shySummary').textContent='scarico il modello…';
+    try{ shyState.data = await fetchShyfer(); shyState.failed=false; }catch(e){ shyState.failed=true; }
+    renderShyfer(); return;
+  }
+  showShyMap(shyState.idx==null?0:shyState.idx);
+});
+
+/* ---------- mappa animata del vento (Windy embed): si carica solo quando la scheda viene aperta ---------- */
+function windyUrl(overlay){
+  const p = new URLSearchParams({ type:'map', location:'coordinates', metricWind:'km/h', metricTemp:'°C', zoom:'11', overlay, product:'ecmwf', level:'surface', lat:'44.80', lon:'12.33', message:'true', marker:'true', detailLat:'44.79', detailLon:'12.30', calendar:'now', pressure:'false', menu:'', detail:'false' });
+  return 'https://embed.windy.com/embed.html?' + p.toString();
+}
+let windyOverlay = 'wind';
+function loadWindy(){ const f=$('windyFrame'); const u=windyUrl(windyOverlay); if(f.getAttribute('src')!==u) f.setAttribute('src', u); }
+$('windyBox').addEventListener('toggle', ()=>{ if($('windyBox').open) loadWindy(); });
+document.querySelectorAll('.windyctl button').forEach(b=>b.addEventListener('click', ()=>{ document.querySelectorAll('.windyctl button').forEach(x=>x.classList.toggle('on', x===b)); windyOverlay=b.dataset.ov; loadWindy(); }));
 
 /* ---------- calendario astronomico ---------- */
 function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
@@ -822,17 +865,18 @@ $('astroNext').addEventListener('click', ()=>{ $('astroDate').value=shiftDate($(
 renderAstro();
 
 /* ---------- main ---------- */
-let busy=false;
+let busy=false, lastLoadAt=0;
 async function load(){
-  if(busy) return; busy=true;
+  if(busy) return; busy=true; lastLoadAt=Date.now();
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, others, sacca, meteo, shyfer] = await Promise.all([
+  const [obs, fc, alert, am, sacca] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchOthers(),'altri mareografi'), safe(fetchSacca(),'Sacca'), safe(fetchMeteo(),'vento e pressione'), safe(fetchShyfer(),'Shyfer')
+    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca')
   ]);
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others, sacca, meteo, shyfer};
+  // Shyfer si scarica solo quando la sua scheda è aperta (vedi toggle); se già scaricato in questa sessione, resta
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
@@ -852,7 +896,8 @@ $('themeBtn').addEventListener('click', ()=>{ const dark = document.documentElem
 $('chartToggle').addEventListener('click', ()=>{ chartDetails=!chartDetails; try{ localStorage.setItem('chart-details', chartDetails?'1':'0'); }catch(e){} if(lastData) render(lastData); });
 let lastData=null; const _render=render; render=function(d){ lastData=d; _render(d); };
 let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(lastData) try{ render(lastData); }catch(e){} }, 150); });
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) load(); });
+// tornando sull'app si aggiorna, ma non più di una volta al minuto (i dati cambiano ogni 10 minuti)
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && Date.now()-lastLoadAt>60e3) load(); });
 // Arpae pubblica le letture a hh:00/10/20… circa 20 min dopo, intorno a hh:x0+0:30: aggiorna un minuto dopo ogni decina
 function scheduleNext(){ const n=new Date(); const ms=((10-(n.getMinutes()%10))*60-n.getSeconds())*1000+60e3; setTimeout(()=>{ load(); scheduleNext(); }, ms); }
 scheduleNext();

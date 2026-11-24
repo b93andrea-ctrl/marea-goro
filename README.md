@@ -15,14 +15,15 @@ Pagina web installabile sul telefono (PWA). Legge direttamente i dati pubblici d
 9. **Previsione Adriac corretta**: l'errore della previsione misurato sulle ultime 6 ore viene applicato alle ore successive con decadimento di 4 ore. Test a ritroso (14-15 nov, maltempo): errore a +1 h da 16 a 6 cm, a +3 h da 15 a 12 cm, invariato oltre +6 h. Le alte/basse previste e i massimi/minimi 48 h usano la curva corretta; la Adriac grezza resta visibile punteggiata.
 10. **Cursore sul grafico**: tocca o trascina il dito sul grafico e un'etichetta mostra ora e livello in quel punto (misurato, stima, previsto o astronomico a seconda del tratto). Si toglie toccando l'etichetta; resta al suo posto agli aggiornamenti.
 11. **Sacca di Goro · modello Shyfer e stima** (scheda chiusa, si apre toccandola): mappa oraria del modello Shyfer (SHYFEM fatto girare da Arpae, 72 ore, colori a scatti di 0,2 m) con cursore per scorrere le ore e i punti Goro, Gorino, Bocca segnati; sotto, per l'ora scelta, il livello Shyfer letto dai pixel della mappa nei tre punti e la "stima Goro" ricavata dalla nostra curva di Porto Garibaldi (misurato + previsione corretta) spostata avanti di 45 minuti, il ritardo visto nelle mappe del 18/11/2026. Una riga dice se le due fonti concordano. La mappa si scarica solo a scheda aperta.
-12. **Vento e pressione** nella scheda Scostamento meteo: anemometro di Porto Garibaldi (10 m) e barometro di Guagnino/Comacchio con tendenza a 3 ore, dallo stesso servizio dei mareografi di allertameteo; una riga spiega se il vento tende ad alzare o abbassare il mare.
+12. **Mappa del vento in movimento** (scheda chiusa, sotto Scostamento meteo): mappa animata di Windy.com (embed ufficiale, modello ECMWF) centrata sulla Sacca con zoom 10, pulsanti per vento, raffiche, onde, pressione, pioggia; la barra in basso scorre le ore. L'iframe si carica solo quando la scheda viene aperta (pesa qualche MB).
+13. **Vento e pressione** nella scheda Scostamento meteo: anemometro di Porto Garibaldi (10 m) e barometro di Guagnino/Comacchio con tendenza a 3 ore, dallo stesso servizio dei mareografi di allertameteo; una riga spiega se il vento tende ad alzare o abbassare il mare.
 
-Aggiornamento automatico ogni 10 minuti e quando riapri l'app. Se la rete manca, mostra l'ultimo set di dati salvato.
+Aggiornamento automatico ogni 10 minuti e quando riapri l'app (non più di una volta al minuto). Se la rete manca, mostra l'ultimo set di dati salvato. Per aggiornamento: 7 richieste (Arpae livello e previsione, allerta, allertameteo livello/vento/direzione/pressione in un solo giro); le stazioni della Sacca si chiedono una volta l'ora, la tendenza della pressione viene dalle letture salvate sul telefono, il modello Shyfer e la mappa Windy si scaricano solo aprendo le rispettive schede.
 
 ## File
 
 - `app/index.html` — tutta l'app (HTML, CSS, JS, nessuna dipendenza esterna)
-- `app/manifest.webmanifest`, `app/sw.js`, `app/icon-192.png`, `app/icon-512.png` — quanto serve per installarla come app; `app/logo.jpg` è il logo originale, `app/logo-wave.png` il ritaglio dell'onda usato nell'intestazione
+- `app/manifest.webmanifest`, `app/sw.js`, `app/icon-192.png`, `app/icon-512.png` — quanto serve per installarla come app; `app/logo-wave.png` è il ritaglio dell'onda del logo usato nell'intestazione (240 px)
 - `serve.ps1` + `.claude/launch.json` — server locale di prova su http://localhost:8765/
 - `fonti-maree-goro.md` — tutte le fonti dati verificate, con gli indirizzi esatti
 
