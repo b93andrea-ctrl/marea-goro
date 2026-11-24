@@ -91,6 +91,23 @@ details.shy[open] summary{margin-bottom:10px;padding-bottom:6px;border-bottom:1p
 .shyleg{display:flex;flex-wrap:wrap;gap:4px 8px;margin:8px 0 10px;font-size:.66rem;color:var(--muted)}
 .shyleg span{display:inline-flex;align-items:center;gap:3px}
 .shyleg i{display:inline-block;width:12px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
+svg.pomap{width:100%;max-width:420px;height:auto;display:block;margin:4px auto 6px}
+details.sub{margin-top:8px;padding-top:6px;border-top:1px solid var(--line)}
+details.sub summary{list-style:none;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--sea)}
+details.sub summary::-webkit-details-marker{display:none}
+details.sub summary::before{content:'▸ ';}
+details.sub[open] summary::before{content:'▾ ';}
+details.sub[open] summary{margin-bottom:8px}
+.pvsel{font:inherit;font-size:.85rem;width:100%;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:7px 10px;margin:2px 0 6px}
+table.po td:first-child{white-space:normal}
+table.po td:first-child .u{display:block;font-size:.72rem;margin:0}
+table.po td.tr{color:var(--muted);font-weight:500} table.po td.tr.up{color:var(--crit);font-weight:600} table.po td.tr.down{color:var(--sea);font-weight:600}
+table.po .pill{font-size:.66rem;padding:2px 7px}
+.poest{margin-top:8px;font-size:.9rem;line-height:1.45}
+.poest b{font-family:var(--display);font-size:1.05rem;font-weight:500}
+.poav{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--sea-soft);font-size:.84rem;line-height:1.4}
+.poav .k{font-family:var(--display);font-size:.66rem;text-transform:uppercase;letter-spacing:1px;font-weight:600;color:var(--sea);padding-top:3px;white-space:nowrap}
+.poav.warn{background:var(--sand-soft)} .poav.warn .k{color:var(--sand)}
 .fishctl{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-bottom:8px;font-size:.82rem}
 .fishctl input{font:inherit;font-family:var(--display);font-size:1rem;width:4.2em;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:4px 6px;text-align:center}
 .fishctl .d{margin:0}
@@ -159,10 +176,32 @@ table.t td:first-child{font-family:var(--font);font-size:.9rem}
 .astro .e.alta .k{color:var(--sea)}
 .astro .e b{font-weight:600}
 .astro .e span:last-child{color:var(--muted)}
+/* il primo giorno a tutta larghezza, con le alte e basse su due colonne; gli altri sei a coppie */
+.astro .day:first-child{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;column-gap:14px;align-content:start}
+.astro .day:first-child h3{grid-column:1/-1}
+.astro .day:first-child .e:nth-child(3){border-top:0}
 input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:10px;padding:7px 10px}
 .note{font-size:.75rem;color:var(--muted);margin-top:14px;line-height:1.45;padding:0 4px}
 .err{color:var(--muted);font-size:.75rem;margin:8px 4px 0;line-height:1.4}
 .err::before{content:"⚠ ";color:var(--warn)}
+/* riga di stato sotto l'intestazione */
+.strip{display:flex;gap:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;align-items:center;justify-content:center;width:100%;border:0;background:none;margin:-2px 0 0;padding:12px 4px;font:inherit;font-size:.72rem;color:var(--muted);text-align:left;cursor:pointer;border-radius:0}
+.strip::-webkit-scrollbar{display:none}
+header{margin-bottom:0}
+.strip{margin:12px 0;padding:9px 10px;gap:10px;font-size:.7rem;background:var(--card);border:1px solid var(--line);border-radius:999px}
+.strip span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);display:inline-block;flex:none}
+.dot.green{background:#2e9e5b}.dot.yellow{background:var(--warn)}.dot.orange{background:#e67e22}.dot.red{background:var(--crit)}
+/* schede: una sola visibile, scelta dalla barra in basso */
+.tab{display:none} .tab>.hero,.tab>.grid:first-child{margin-top:0}
+body[data-tab=marea] .tab[data-tab=marea],body[data-tab=pesca] .tab[data-tab=pesca],body[data-tab=meteo] .tab[data-tab=meteo],body[data-tab=po] .tab[data-tab=po]{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+body{padding-bottom:76px}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);background:var(--card);border-top:1px solid var(--line);padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+.nav button{border:0;background:none;color:var(--sand);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;font-family:var(--display);font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;border-radius:0;width:100%;height:auto;line-height:1}
+.nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nav button.on{color:var(--sea)}
+.card .pv{margin:-4px 0 8px;font-size:.84rem;color:var(--fg)}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -180,6 +219,10 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </div>
 </header>
 
+<button type="button" class="strip" id="strip" aria-label="Allerta, scostamento e vento: apri la scheda Meteo"><span id="stripAlert"><i class="dot"></i>allerta…</span><span id="stripSurge"><i class="dot"></i>mare…</span><span id="stripWind"><i class="dot"></i>vento…</span></button>
+
+<main>
+<section class="tab" data-tab="marea">
 <section class="hero" aria-label="Grafico marea Porto Garibaldi">
   <div class="kpi">
     <div class="big" id="levelNow">–<small> m</small></div>
@@ -201,11 +244,43 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   <div class="hint">Tocca o trascina sul grafico per leggere ora e livello.</div>
 </section>
 
-<section class="grid" id="stats">
+<section class="grid">
   <div class="card wide">
     <h2>Prossime alte e basse previste (Adriac corretta, Porto Garibaldi)</h2>
     <div class="extrema" id="extrema"></div>
     <div class="d">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
+  </div>
+
+  <div class="card wide">
+    <h2>Ultime 24 ore osservate</h2>
+    <div class="twocol">
+      <div><div class="lbl">▲ Massimo</div><div class="v" id="obsMax">–</div><div class="d" id="obsMaxWhen"></div></div>
+      <div><div class="lbl">▼ Minimo</div><div class="v" id="obsMin">–</div><div class="d" id="obsMinWhen"></div></div>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <h2>Prossime 48 ore previste</h2>
+    <div class="twocol">
+      <div><div class="lbl">▲ Massimo</div><div class="v" id="fcMax">–</div><div class="d" id="fcMaxWhen"></div></div>
+      <div><div class="lbl">▼ Minimo</div><div class="v" id="fcMin">–</div><div class="d" id="fcMinWhen"></div></div>
+    </div>
+    <div class="d" id="fcEmission"></div>
+  </div>
+</section>
+</section>
+
+<section class="tab" data-tab="pesca">
+<section class="grid">
+  <div class="card wide" id="fishBox">
+    <h2>Orari di pesca · prossimi 7 giorni</h2>
+    <div class="d pv" id="fishSummary">calcolo in corso…</div>
+    <div class="fishctl">
+      <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
+      <span class="d">dentro la Sacca (Porto Garibaldi +45 min), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
+    </div>
+    <div id="fish"></div>
+    <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
   </div>
 
   <details class="card wide shy" id="shyBox">
@@ -236,6 +311,15 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </div>
 
   <div class="card wide">
+    <h2>Acqua nella Sacca di Goro (ogni ora)</h2>
+    <div id="sacca"></div>
+  </div>
+</section>
+</section>
+
+<section class="tab" data-tab="meteo">
+<section class="grid">
+  <div class="card wide">
     <h2>Scostamento meteo</h2>
     <div class="v" id="surge">–</div>
     <div class="d" id="surgeCorr"></div>
@@ -256,53 +340,55 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
   </details>
 
   <div class="card wide">
-    <h2>Ultime 24 ore osservate</h2>
-    <div class="twocol">
-      <div><div class="lbl">▲ Massimo</div><div class="v" id="obsMax">–</div><div class="d" id="obsMaxWhen"></div></div>
-      <div><div class="lbl">▼ Minimo</div><div class="v" id="obsMin">–</div><div class="d" id="obsMinWhen"></div></div>
-    </div>
-  </div>
-
-  <div class="card wide">
-    <h2>Prossime 48 ore previste</h2>
-    <div class="twocol">
-      <div><div class="lbl">▲ Massimo</div><div class="v" id="fcMax">–</div><div class="d" id="fcMaxWhen"></div></div>
-      <div><div class="lbl">▼ Minimo</div><div class="v" id="fcMin">–</div><div class="d" id="fcMinWhen"></div></div>
-    </div>
-    <div class="d" id="fcEmission"></div>
-  </div>
-
-  <div class="card wide">
     <h2>Allerta protezione civile · costa ferrarese (zona D2)</h2>
     <div id="alert"></div>
   </div>
 
-  <div class="card half">
+  <div class="card wide">
     <h2>Mareografi costa</h2>
     <div id="others"></div>
   </div>
-
-  <div class="card half">
-    <h2>Acqua nella Sacca di Goro (ogni ora)</h2>
-    <div id="sacca"></div>
-  </div>
-
-  <details class="card wide shy" id="fishBox">
-    <summary><span class="h">Orari di pesca · 7 giorni</span><span class="pv" id="fishSummary">apri per le finestre di pesca</span></summary>
-    <div class="fishctl">
-      <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
-      <span class="d">dentro la Sacca (Porto Garibaldi +45 min), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
-    </div>
-    <div id="fish"></div>
-    <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
-  </details>
-
 </section>
+</section>
+
+<section class="tab" data-tab="po">
+<section class="grid">
+  <div class="card wide" id="poBox">
+    <h2>Po · livelli e arrivo acque</h2>
+    <div class="d pv" id="poSummary">carico gli idrometri…</div>
+    <select id="pvEvent" class="pvsel" aria-label="Periodo da vedere">
+      <option value="now">Adesso e prossimi 3 giorni</option>
+      <option value="2024-10">Piena di ottobre 2024</option>
+      <option value="2025-04">Piena di aprile 2025</option>
+      <option value="2019-11">Piena di novembre 2019</option>
+      <option value="2014-11">Piena di novembre 2014</option>
+    </select>
+    <div class="shyctl">
+      <button type="button" id="pvPrev" aria-label="Indietro di 6 ore">‹</button>
+      <input type="range" id="pvSlider" min="-24" max="72" step="1" value="0" aria-label="Ore da adesso">
+      <button type="button" id="pvNext" aria-label="Avanti di 6 ore">›</button>
+      <button type="button" id="pvPlay" aria-label="Avvia o ferma">▶</button>
+    </div>
+    <div class="shywhen" id="pvWhen">adesso</div>
+    <svg class="pomap" id="poMap" viewBox="0 0 360 400" role="img" aria-label="Schema del Po da Piacenza a Goro con i livelli nel tempo"></svg>
+    <div class="d" id="pvNote"></div>
+    <div id="po"></div>
+  </div>
+</section>
+</section>
+</main>
 
 <div id="error" class="err" hidden></div>
 <p class="note">
 Dati Arpae Emilia-Romagna e Protezione civile ER. Livelli sullo zero Arpae, orari italiani.
 </p>
+
+<nav class="nav" aria-label="Sezioni">
+  <button type="button" data-go="marea" aria-label="Marea"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16"/><path d="M4 7h3M4 11h2M4 15h3M4 19h2"/><path d="M9 14c2.5 0 2.5-2 5-2s2.5 2 5 2M9 19c2.5 0 2.5-2 5-2s2.5 2 5 2"/></svg><span>Marea</span></button>
+  <button type="button" data-go="pesca" aria-label="Pesca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c3-4 7-6 11-6 2.5 0 4.5 1 6 3-1.5 2-3.5 3-6 3-4 0-8-2-11-6"/><path d="M3 12c3 4 7 6 11 6"/><path d="M20 9l2 3-2 3"/><circle cx="15" cy="10.5" r=".8" fill="currentColor"/></svg><span>Pesca</span></button>
+  <button type="button" data-go="meteo" aria-label="Meteo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 13h15a3 3 0 1 1-3 3"/><path d="M3 18h8a2 2 0 1 1-2 2"/></svg><span>Meteo</span></button>
+  <button type="button" data-go="po" aria-label="Po"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v7"/><path d="M12 9c0 4-5 5-6 10"/><path d="M12 9c0 4 5 5 6 10"/><path d="M12 9v10"/><path d="M3 21c1.5 0 1.5-1.2 3-1.2s1.5 1.2 3 1.2 1.5-1.2 3-1.2 1.5 1.2 3 1.2 1.5-1.2 3-1.2 1.5 1.2 3 1.2"/></svg><span>Po</span></button>
+</nav>
 
 <script>
 (function(){
@@ -384,11 +470,227 @@ async function fetchAllertameteo(){
   }
   return { others:null, meteo:null };
 }
+/* ---------- Po: livelli lungo l'asta e stima dell'arrivo delle acque ----------
+   Livelli dagli idrometri (allertameteo, stesso servizio dei mareografi): adesso e 24 h fa, da Piacenza al Po di Goro,
+   con le soglie di piena. Propagazione calibrata su 100 giorni Arpae (16/08–24/11/2026, regime di magra):
+   Boretto → Pontelagoscuro 26 h, 0,51 m per metro; Piacenza → Pontelagoscuro 49 h, 0,50 m per metro.
+   Pioggia prevista sul bacino (Open-Meteo, 4 punti: Torino, Appennino emiliano, Lombardia, Monferrato) come segnale. */
+const PO_ST = [ {id:'5417',n:'Piacenza'}, {id:'12765',n:'Cremona'}, {id:'12750',n:'Casalmaggiore'}, {id:'3028',n:'Boretto'}, {id:'12733',n:'Borgoforte'}, {id:'12847',n:'Sermide'}, {id:'5393',n:'Pontelagoscuro'}, {id:'5420',n:'Ariano · Po di Goro'} ];
+const PO_TRIB = [ {id:'5534',n:'Taro'}, {id:'5551',n:'Parma'}, {id:'5522',n:'Enza'}, {id:'5340',n:'Secchia'}, {id:'5415',n:'Panaro'} ]; // affluenti: solo come avviso
+/* Taratura del 24/11/2026 su sei piene (mag 2009, mag 2013, nov 2014, nov 2019, ott 2024, apr 2025), dati Arpae orari:
+   Boretto → Pontelagoscuro ritardo 20 h, 0,65 m per m (R² 0,86 sulle variazioni a 6 h; rapporto reale tra 0,46 e 0,98);
+   Pontelagoscuro → Ariano ritardo 8 h, 0,59 m per m (R² 0,77); Piacenza → Pontelagoscuro ritardo 34 h, 0,43 m per m.
+   Secchia, Panaro, Parma e Taro ai loro idrometri non aggiungono un contributo lineare misurabile (coefficienti zero):
+   la parte mancante nel 2024-2025 (+0,7 m) viene dal lato lombardo (Oglio, Mincio), visibile in tempo reale a Sermide. */
+const PO_CAL = { B_PL:{lag:20, k:0.65, kmin:0.45, kmax:1.0}, PL_AR:{lag:8, k:0.59}, PC_PL:{lag:34, k:0.43}, PC_B:{lag:14, k:0.86} };
+async function fetchPo(){
+  try{ const c=JSON.parse(localStorage.getItem('po-cache')||'null'); if(c && Date.now()-c.at<25*60e3 && c.data) return c.data; }catch(e){}
+  const V='254,0,0/1,-,-,-/B13215';
+  let slot = Math.floor(Date.now()/1800e3)*1800e3, now=null;
+  for(let k=0;k<3 && !now;k++){ const j = await getJSON(amSensor(V, slot)).catch(()=>null); if(j && j.some(x=>PO_ST.some(s=>s.id===x.idstazione) && x.value!=null)) now=j; else slot-=1800e3; }
+  if(!now) return null;
+  const ago = await getJSON(amSensor(V, slot-24*3600e3)).catch(()=>null);
+  let rain=null; try{ rain = await fetchBasinRain(); }catch(e){}
+  const mk = s => { const r=now.find(x=>x.idstazione===s.id), p=(ago||[]).find(x=>x.idstazione===s.id); return { n:s.n, v: r&&r.value!=null?+r.value:null, v24: p&&p.value!=null?+p.value:null, s1:r?+r.soglia1:0, s2:r?+r.soglia2:0, s3:r?+r.soglia3:0 }; };
+  const rows = PO_ST.map(mk), trib = PO_TRIB.map(mk);
+  const data = { time:slot, rows, trib, rain };
+  try{ localStorage.setItem('po-cache', JSON.stringify({at:Date.now(), data})); }catch(e){}
+  return data;
+}
+async function fetchBasinRain(){
+  try{ const c=JSON.parse(localStorage.getItem('rain-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data) return c.data; }catch(e){}
+  const j = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=45.07,44.55,45.45,44.75&longitude=7.70,10.30,9.60,8.60&daily=precipitation_sum&timezone=UTC&forecast_days=5');
+  const names=['Piemonte (Torino)','Appennino emiliano','Lombardia','Monferrato'];
+  const data = j.map((p,i)=>({ zone:names[i], days:p.daily.time, mm:p.daily.precipitation_sum.map(v=>v||0) }));
+  try{ localStorage.setItem('rain-cache', JSON.stringify({at:Date.now(), data})); }catch(e){}
+  return data;
+}
+/* ---------- schema interattivo del Po: dove sta l'acqua, dove va, quando arriva ----------
+   Le stazioni sono disposte secondo il tempo di viaggio dell'acqua da Piacenza (ore), non secondo i km.
+   Livello nel tempo: nel passato dalle letture (storico Arpae per le stazioni emiliane, altrimenti retta tra 24 h fa e adesso);
+   nel futuro = livello di adesso + coefficiente × (variazione di Piacenza arrivata con il ritardo della stazione).
+   Il cerchio che scorre è il fronte dell'acqua partita da Piacenza 24 h fa. */
+const PO_TRAVEL = { 'Piacenza':[0,1], 'Cremona':[5,0.95], 'Casalmaggiore':[9,0.9], 'Boretto':[14,0.86], 'Borgoforte':[22,0.75], 'Sermide':[30,0.6], 'Pontelagoscuro':[40,0.5], 'Ariano':[46,0.3] };
+const PO_HIST_IDS = { '5417':'Piacenza', '3028':'Boretto', '5393':'Pontelagoscuro', '5420':'Ariano' };
+let pvState = { po:null, hist:null, h:0, playing:false, timer:null, replay:null };
+/* Piene passate: finestre con dati Arpae a 30 min (dal 2006) per le quattro stazioni emiliane; le altre quattro
+   non hanno storico e nel replay vengono disegnate per interpolazione tra le vicine. Colmi misurati:
+   ott 2024 Piacenza 20/10 04:00 → Boretto 21/10 09:45 → Pontelagoscuro 22/10 19:30 (2,56 m, soglia rossa 2,5);
+   nov 2019 26/11 → 27/11 → 28/11 (2,77); nov 2014 17/11 → 18/11 → 19/11 (3,00). Da Piacenza a Pontelagoscuro 44-63 h. */
+const PO_EVENTS = { '2024-10':{a:'2024-10-16', b:'2024-10-28', n:'piena di ottobre 2024'}, '2025-04':{a:'2025-04-16', b:'2025-04-27', n:'piena di aprile 2025'}, '2019-11':{a:'2019-11-22', b:'2019-12-03', n:'piena di novembre 2019'}, '2014-11':{a:'2014-11-12', b:'2014-11-24', n:'piena di novembre 2014'} };
+const poEventCache = {};
+async function fetchPoEvent(key){
+  if(poEventCache[key]) return poEventCache[key];
+  const ev = PO_EVENTS[key]; const t0 = Date.parse(ev.a+'T00:00:00Z'), t1 = Date.parse(ev.b+'T00:00:00Z'); const hist={};
+  await Promise.all(Object.keys(PO_HIST_IDS).map(async id=>{
+    const j = await getJSON(`${A}meteo_opendata_stazioni_livello_idrometrico?where=${eveWhere({station_id:id, reftime:{$gte:new Date(t0).toUTCString(), $lt:new Date(t1).toUTCString()}})}&sort=reftime&max_results=1500`);
+    hist[PO_HIST_IDS[id]] = (j._items||[]).filter(i=>i.value!=null).map(i=>({t:new Date(i.reftime).getTime(), v:+i.value}));
+  }));
+  return poEventCache[key] = { t0, t1, hist, name:ev.n };
+}
+async function fetchPoHist(){
+  try{ const c=JSON.parse(localStorage.getItem('po-hist')||'null'); if(c && Date.now()-c.at<25*60e3 && c.data) return c.data; }catch(e){}
+  const since = new Date(Date.now()-75*3600e3).toUTCString(), out={};
+  await Promise.all(Object.keys(PO_HIST_IDS).map(async id=>{
+    try{ const j = await getJSON(`${A}meteo_opendata_stazioni_livello_idrometrico?where=${eveWhere({station_id:id, reftime:{$gte:since}})}&sort=reftime&max_results=200`);
+      out[PO_HIST_IDS[id]] = (j._items||[]).filter(i=>i.value!=null).map(i=>({t:new Date(i.reftime).getTime(), v:+i.value})); }catch(e){}
+  }));
+  try{ localStorage.setItem('po-hist', JSON.stringify({at:Date.now(), data:out})); }catch(e){}
+  return out;
+}
+function poLevelAt(name, t){ // name = chiave di PO_TRAVEL; t in ms
+  const po=pvState.po, now=po.time, hist=pvState.hist||{};
+  const row = po.rows.find(r=>r.n.startsWith(name)); if(!row || row.v==null) return null;
+  const H = hist[name];
+  if(t<=now){
+    if(H && H.length>1){ const v=interp(H,t); if(v!=null) return v; }
+    if(row.v24==null) return row.v;
+    const f = Math.max(0, Math.min(1, (t-(now-24*3600e3))/(24*3600e3))); return row.v24 + (row.v-row.v24)*f;
+  }
+  if(name==='Piacenza') return row.v;
+  // catena tarata: Pontelagoscuro da Boretto (20 h, 0,65), Ariano da Pontelagoscuro (8 h, 0,59); le altre da Piacenza
+  const chain = { 'Pontelagoscuro':['Boretto', PO_CAL.B_PL], 'Ariano':['Pontelagoscuro', PO_CAL.PL_AR] };
+  if(chain[name]){ const [up, c] = chain[name]; const tu = t - c.lag*3600e3; const a = poLevelAt(up, tu), b = poLevelAt(up, now - c.lag*3600e3); return (a!=null && b!=null) ? row.v + c.k*(a-b) : row.v; }
+  const [lag,k] = PO_TRAVEL[name]; const tp = t-lag*3600e3;
+  const P = hist['Piacenza'];
+  if(P && P.length>1 && tp<=now){ const a=interp(P,tp), b=interp(P,now-lag*3600e3); if(a!=null && b!=null) return row.v + k*(a-b); }
+  const pc = po.rows.find(r=>r.n==='Piacenza'); if(pc && pc.v!=null && pc.v24!=null && tp<=now) return row.v + k*(pc.v-pc.v24)*Math.min(1,(tp-(now-24*3600e3))/(24*3600e3));
+  return row.v + ((pc && pc.v!=null && pc.v24!=null) ? k*(pc.v-pc.v24) : 0); // oltre l'orizzonte: tiene l'ultimo valore noto
+}
+function drawPoMap(){
+  const svg=$('poMap'), po=pvState.po; if(!po) return;
+  // schema verticale: Piacenza in alto, mare in basso; posizione = tempo di viaggio dell'acqua
+  const W=360, H=400, T=26, B=40, X=150, now=po.time, rep=pvState.replay, t=(rep?rep.t0:now)+pvState.h*3600e3;
+  const y = h => T + h/46*(H-T-B);
+  const names = Object.keys(PO_TRAVEL);
+  const lvl = n => rep ? (rep.hist[n] && rep.hist[n].length>1 ? interp(rep.hist[n], t) : null) : poLevelAt(n,t);
+  let g = '';
+  // il fiume si gonfia e cambia colore dove il livello si avvicina o supera le soglie di piena:
+  // larghezza = quanto manca alla soglia gialla (da 3 m sotto = sottile, a soglia = piena larghezza, oltre = ancora di più)
+  const fOf = (row,v) => Math.max(0, Math.min(1.6, 1 + (v-row.s1)/3));
+  const cOf = (row,v) => (row.s3&&v>=row.s3)?'var(--crit)':(row.s2&&v>=row.s2)?'#e67e22':(v>=row.s1)?'var(--warn)':'var(--sea)';
+  const lvlInfo = n => { const row=po.rows.find(r=>r.n.startsWith(n)); const v=lvl(n); if(!row||v==null||!row.s1) return {w:7, c:'var(--sea)', f:0, v:null, known:false};
+    const f = fOf(row,v); return {w: 7 + 26*f, c:cOf(row,v), f, v, known:true}; };
+  const pts = names.map(n=>({n, y:y(PO_TRAVEL[n][0]), ...lvlInfo(n)}));
+  // nel replay le stazioni senza storico prendono il "gonfiore" interpolato tra le vicine note
+  if(rep){ pts.forEach((p,i)=>{ if(p.known) return; let a=i-1; while(a>=0 && !pts[a].known) a--; let b=i+1; while(b<pts.length && !pts[b].known) b++; if(a<0||b>=pts.length) return;
+    const fr=(p.y-pts[a].y)/(pts[b].y-pts[a].y); p.f = pts[a].f + (pts[b].f-pts[a].f)*fr; p.w = 7+26*p.f; p.c = p.f>=1 ? (pts[b].f>pts[a].f?pts[b].c:pts[a].c) : 'var(--sea)'; }); }
+  pts.unshift({y:T-16, w:pts[0].w, c:pts[0].c, f:pts[0].f}); pts.push({y:H-B+10, w:pts[pts.length-1].w, c:pts[pts.length-1].c, f:pts[pts.length-1].f});
+  // fascia: un poligono per ogni tratto, con il colore del punto più critico del tratto
+  for(let i=0;i<pts.length-1;i++){ const a=pts[i], b=pts[i+1]; const col = (b.f>a.f)?b.c:a.c; const op = 0.18 + 0.5*Math.max(a.f,b.f);
+    g += `<path d="M${X-a.w/2} ${a.y} L${X+a.w/2} ${a.y} L${X+b.w/2} ${b.y} L${X-b.w/2} ${b.y} Z" fill="${col}" opacity="${Math.min(0.85,op).toFixed(2)}"/>`; }
+  g += `<text x="${X}" y="${H-6}" font-size="12" text-anchor="middle" fill="var(--muted)">▼ mare</text>`;
+  // scala dei tempi di viaggio, a destra
+  for(const hh of [0,12,24,36,46]){ g += `<text x="${W-6}" y="${y(hh)+4}" font-size="10" text-anchor="end" fill="var(--muted)">${hh===0?'partenza':hh===46?'~2 giorni':'+'+hh+' h'}</text>`; }
+  // fronte dell'acqua partita da Piacenza 24 h fa (solo in modalità adesso)
+  const pc = po.rows.find(r=>r.n==='Piacenza'); const dPc = (pc && pc.v!=null && pc.v24!=null) ? pc.v-pc.v24 : 0;
+  const travel = pvState.h + 24;
+  if(!rep && Math.abs(dPc)>=0.1 && travel>=0 && travel<=50){ const yy = Math.min(y(46)+12, y(travel)); const col = dPc>=0.1?'var(--crit)':'var(--sea)'; const rr = 9+Math.min(12, Math.abs(dPc)*20);
+    g += `<circle cx="${X}" cy="${yy}" r="${rr+6}" fill="${col}" opacity=".18"/><circle cx="${X}" cy="${yy}" r="${rr}" fill="${col}" opacity=".85"/>`;
+    g += `<text x="${X+rr+10}" y="${yy+4}" font-size="11" fill="${col}" font-weight="600">${dPc>=0.1?'onda in arrivo':'calo in arrivo'}</text>`; }
+  // stazioni mostrate: le cinque che contano; numero = metri sotto (−) o sopra (+) la soglia gialla di piena, uguale per tutte
+  const beyond = !rep && pvState.h>46; // oltre l'orizzonte dei dati a monte: valori tenuti fermi
+  const SHOW = ['Piacenza','Boretto','Sermide','Pontelagoscuro','Ariano'];
+  pts.slice(1,-1).filter(p=>SHOW.includes(p.n)).forEach(p=>{
+    const n=p.n, yy=p.y, row=po.rows.find(r=>r.n.startsWith(n)), v=p.v;
+    const goro = n==='Ariano';
+    const c = beyond ? 'var(--muted)' : (p.known ? p.c : 'var(--muted)');
+    const d = (v!=null && row && row.s1) ? v-row.s1 : null;
+    const ref = rep ? null : (row ? row.v : null);
+    const dv = (!rep && v!=null && ref!=null && pvState.h!==0) ? v-ref : null;
+    g += `<circle cx="${X}" cy="${yy}" r="${goro?7:6}" fill="${c}" stroke="var(--card)" stroke-width="2"/>`;
+    g += `<text x="${X-16}" y="${yy+4}" font-size="${goro?14:13}" text-anchor="end" fill="${goro?'var(--sea)':'var(--fg)'}" font-weight="${goro?700:600}">${goro?'Goro':n}</text>`;
+    g += `<text x="${X+16}" y="${yy+4}" font-size="${goro?14:13}" fill="${c}" font-weight="${goro?700:600}">${d==null?(rep&&v==null?'≈':'–'):(d>=0?'+':'−')+Math.abs(d).toFixed(1).replace('.',',')}<tspan font-size="10" fill="var(--muted)" font-weight="500">${d==null?'':' m'}${dv!=null&&Math.abs(dv)>=0.05?` (${dv>0?'+':'−'}${Math.abs(dv).toFixed(2).replace('.',',')})`:''}</tspan></text>`;
+  });
+  g += `<text x="${X}" y="${H-20}" font-size="10" text-anchor="middle" fill="var(--muted)">metri dalla soglia gialla di piena</text>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = g;
+  const d = new Date(t);
+  if(rep){
+    $('pvWhen').textContent = `${fmtD(d)} ${fmtT(d)} · ${rep.name}`;
+    const pk = n => { const h=rep.hist[n]||[]; return h.reduce((b,p)=>(!b||p.v>b.v)?p:b, null); };
+    const L=pk('Pontelagoscuro'), A=pk('Ariano'), P=pk('Piacenza');
+    const Lv = lvl('Pontelagoscuro'), Av = lvl('Ariano');
+    $('pvNote').textContent = `Colmi: Piacenza ${P?fmtD(new Date(P.t))+' '+fmtT(new Date(P.t)):'–'} → Pontelagoscuro ${L?m(L.v)+' m il '+fmtD(new Date(L.t))+' '+fmtT(new Date(L.t)):'–'} → Goro ${A?m(A.v)+' m il '+fmtD(new Date(A.t))+' '+fmtT(new Date(A.t)):'–'}. Le stazioni con ≈ sono interpolate.`;
+    return;
+  }
+  const rel = pvState.h===0?'adesso':(pvState.h>0?`fra ${pvState.h} h`:`${-pvState.h} h fa`);
+  $('pvWhen').textContent = `${rel} · ${fmtD(d)} ${fmtT(d)}${beyond?' · oltre i dati':''}`;
+  const L0 = poLevelAt('Pontelagoscuro', t), A0 = poLevelAt('Ariano', t);
+  $('pvNote').textContent = beyond ? `Oltre 46 ore non c'è acqua già in viaggio da osservare: valori fermi all'ultima stima.` : (pvState.h>0 ? 'Stima dall\'acqua già in viaggio: da Boretto a Pontelagoscuro in 20 h, a Goro in 28 h.' : 'Colore = soglia di piena superata · fiume largo = vicino alla piena.');
+}
+async function pvSelectEvent(key){
+  const sl=$('pvSlider');
+  if(pvState.playing){ clearInterval(pvState.timer); pvState.playing=false; $('pvPlay').textContent='▶'; }
+  if(key==='now'){ pvState.replay=null; sl.min=-24; sl.max=72; pvSet(0); return; }
+  $('pvWhen').textContent='scarico i dati storici…';
+  try{ const rep = await fetchPoEvent(key); pvState.replay=rep; sl.min=0; sl.max=Math.round((rep.t1-rep.t0)/3600e3); pvSet(0); }
+  catch(e){ $('pvWhen').textContent='storico non raggiungibile'; }
+}
+$('pvEvent').addEventListener('change', e=>pvSelectEvent(e.target.value));
+function pvSet(h){ const sl=$('pvSlider'); pvState.h=Math.max(+sl.min,Math.min(+sl.max,Math.round(h))); sl.value=pvState.h; drawPoMap(); }
+$('pvSlider').addEventListener('input', e=>pvSet(+e.target.value));
+$('pvPrev').addEventListener('click', ()=>pvSet(pvState.h-6));
+$('pvNext').addEventListener('click', ()=>pvSet(pvState.h+6));
+$('pvPlay').addEventListener('click', ()=>{ const sl=$('pvSlider'); if(pvState.playing){ clearInterval(pvState.timer); pvState.playing=false; $('pvPlay').textContent='▶'; return; } pvState.playing=true; $('pvPlay').textContent='❚❚'; if(pvState.h>=+sl.max) pvSet(+sl.min); pvState.timer=setInterval(()=>{ if(pvState.h>=+sl.max){ clearInterval(pvState.timer); pvState.playing=false; $('pvPlay').textContent='▶'; return; } pvSet(pvState.h+1); }, pvState.replay?60:120); });
+function renderPo(po){
+  const el=$('po'), sum=$('poSummary');
+  pvState.po = po; if(po && curTab==='po') activatePo();
+  if(!po){ el.innerHTML='<div class="d">Idrometri non raggiungibili al momento.</div>'; sum.textContent='livelli non disponibili'; return; }
+  const pill = r => { if(r.v==null) return ''; const c = (r.s3&&r.v>=r.s3)?'red':(r.s2&&r.v>=r.s2)?'orange':(r.s1&&r.v>=r.s1)?'yellow':'green'; return `<span class="pill ${c}">${{green:'ok',yellow:'attenz.',orange:'piena',red:'piena forte'}[c]}</span>`; };
+  const d24 = r => (r.v==null||r.v24==null) ? '' : `${r.v-r.v24>=0.005?'+':r.v-r.v24<=-0.005?'−':'±'}${Math.abs(r.v-r.v24).toFixed(2).replace('.',',')}`;
+  const trendCls = r => (r.v==null||r.v24==null) ? '' : (r.v-r.v24>=0.1?' up':(r.v-r.v24<=-0.1?' down':''));
+  const get = n => po.rows.find(r=>r.n.startsWith(n));
+  const B=get('Boretto'), P=get('Piacenza'), L=get('Pontelagoscuro'), G=get('Ariano'), SE=get('Sermide');
+  // stima a Pontelagoscuro: domani da Boretto (20 h, ×0,65, forchetta 0,45–1,0), dopodomani da Piacenza (34 h, ×0,43); Goro da Pontelagoscuro (8 h, ×0,59)
+  let est='';
+  if(L && L.v!=null){
+    const dB = (B&&B.v!=null&&B.v24!=null) ? B.v-B.v24 : null, dP = (P&&P.v!=null&&P.v24!=null) ? P.v-P.v24 : null;
+    const c=PO_CAL;
+    const e1 = dB!=null ? L.v + c.B_PL.k*dB : null, e2 = dP!=null ? (e1!=null?e1:L.v) + c.PC_PL.k*dP : null;
+    const lo1 = dB!=null ? L.v + (dB>=0?c.B_PL.kmin:c.B_PL.kmax)*dB : null, hi1 = dB!=null ? L.v + (dB>=0?c.B_PL.kmax:c.B_PL.kmin)*dB : null;
+    const moving = (dB!=null && Math.abs(dB)>=0.10) || (dP!=null && Math.abs(dP)>=0.10);
+    if(moving){
+      est = `Pontelagoscuro atteso: domani ≈ <b>${m(e1)} m</b>${(dB!=null&&Math.abs(dB)>=0.3)?` <span class="u">(da ${m(lo1)} a ${m(hi1)})</span>`:''}${e2!=null?`, dopodomani ≈ <b>${m(e2)} m</b>`:''}.`;
+      if(G && G.v!=null && e1!=null){ const g1 = G.v + c.PL_AR.k*(e1-L.v); est += ` Goro: ≈ <b>${m(g1)} m</b> circa 8 ore dopo.`; }
+    } else est = `A monte il fiume è fermo: Pontelagoscuro resta intorno a <b>${m(L.v)} m</b> nei prossimi 2 giorni.`;
+    // correttivi: righe separate con etichetta, solo quando scattano
+    const av = [];
+    if(L.v>=1.3) av.push(['Goro','warn',`Pontelagoscuro sopra la soglia arancione: a Goro il colmo arriva di norma a Pontelagoscuro + 0,7 m, vicino o sopra la rossa (3,2 m).`]);
+    if(L.v<=-6) av.push(['Magra','warn','Magra severa: con questi livelli il cuneo salino risale nel Po di Goro.']);
+    else if(L.v<=-5) av.push(['Magra','','Fiume in magra.']);
+    // Sermide integra anche Oglio e Mincio (lato lombardo, non tarabile): è il controllo a 8-10 ore
+    if(SE && SE.v!=null && SE.v24!=null && Math.abs(SE.v-SE.v24)>=0.2) av.push(['Sermide', SE.v-SE.v24>0?'warn':'', `${SE.v-SE.v24>0?'Sale':'Cala'} di ${Math.abs(SE.v-SE.v24).toFixed(2).replace('.',',')} m in 24 h: arriva a Pontelagoscuro in 8-10 ore, in più rispetto alla stima da Boretto.`]);
+    // affluenti: solo avviso (ai loro idrometri non danno un contributo misurabile, ma se sono in piena la salita può superare la stima)
+    const tribUp = (po.trib||[]).filter(t=>t.v!=null && t.s1 && t.v>=t.s1).map(t=>t.n);
+    if(tribUp.length) av.push(['Affluenti','warn',`${tribUp.join(', ')} sopra la soglia gialla: la salita a Pontelagoscuro può superare la stima.`]);
+    if(av.length) est += av.map(a=>`<div class="poav${a[1]?' '+a[1]:''}"><span class="k">${a[0]}</span><span>${a[2]}</span></div>`).join('');
+  }
+  // pioggia sul bacino nei prossimi 3 giorni
+  let rainTxt='';
+  if(po.rain && po.rain.length){
+    const tot = po.rain.map(z=>({zone:z.zone, mm:z.mm.slice(0,3).reduce((a,b)=>a+b,0)}));
+    const big = tot.filter(z=>z.mm>=30).sort((a,b)=>b.mm-a.mm);
+    const maxZ = tot.reduce((a,b)=>b.mm>a.mm?b:a);
+    rainTxt = big.length ? `Pioggia prevista entro 3 giorni: ${big.map(z=>`${z.zone} ${Math.round(z.mm)} mm`).join(', ')} → possibile salita fra 3-4 giorni, da confermare quando si muove Piacenza.`
+      : `Pioggia prevista sul bacino entro 3 giorni: modesta (max ${Math.round(maxZ.mm)} mm, ${maxZ.zone}).`;
+  }
+  const wasOpen = $('poMore') ? $('poMore').open : false;
+  el.innerHTML = (est?`<div class="poest">${est}</div>`:'') +
+    `<details class="sub" id="poMore"${wasOpen?' open':''}><summary>Dettagli e idrometri</summary>` +
+    `<table class="t po"><tr><th>Idrometro</th><th>Dalla gialla</th><th>24 h</th><th></th></tr>` +
+    po.rows.map(r=>{ const d=(r.v!=null&&r.s1)?r.v-r.s1:null; return `<tr><td>${r.n}<span class="u"> · ${r.v==null?'–':m(r.v)+' m'}</span></td><td>${d==null?'–':(d>=0?'+':'−')+Math.abs(d).toFixed(1).replace('.',',')+'<span class="u">m</span>'}</td><td class="tr${trendCls(r)}">${d24(r)}</td><td>${pill(r)}</td></tr>`; }).join('') +
+    `</table><div class="d">Letture delle ${fmtT(new Date(po.time))} · in piccolo il livello sullo zero dell'idrometro.</div>` +
+    (rainTxt?`<div class="d">${rainTxt}</div>`:'') +
+    `<div class="d">Previsioni ufficiali di piena: <a href="https://www.agenziapo.it/content/monitoraggio-idrografico-0" target="_blank" rel="noopener">AIPo</a>. Stima tarata su sei piene 2009-2025.</div></details>`;
+  if(L && L.v!=null){ const t = L.v24!=null ? (L.v-L.v24>=0.1?'in salita':L.v-L.v24<=-0.1?'in calo':'stabile') : ''; sum.textContent = `Pontelagoscuro ${m(L.v)} m ${t}${(B&&B.v!=null&&B.v24!=null&&Math.abs(B.v-B.v24)>=0.1)?` · a monte ${B.v-B.v24>0?'sale':'cala'} di ${Math.abs(B.v-B.v24).toFixed(2).replace('.',',')} m`:''}`; }
+  else sum.textContent='apri per i livelli del Po';
+}
 async function fetchWeek(){
   // vento, raffiche, pioggia ora per ora e alba/tramonto per 7 giorni sul mare davanti a Goro (Open-Meteo, ~7 KB);
   // cambia poco: lo riuso per un'ora
   try{ const c=JSON.parse(localStorage.getItem('week-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data) return c.data; }catch(e){}
-  const j = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=44.79&longitude=12.33&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&daily=sunrise,sunset&timezone=UTC&forecast_days=7&wind_speed_unit=kmh');
+  const j = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=44.79&longitude=12.33&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&daily=sunrise,sunset&timezone=UTC&forecast_days=8&wind_speed_unit=kmh'); // 8 giorni: così dopo il tramonto restano sempre 7 giorni in elenco
   const h=j.hourly, d=j.daily;
   const data = {
     hours: h.time.map((ts,i)=>({ t:Date.parse(ts+'Z'), spd:h.wind_speed_10m[i], gust:h.wind_gusts_10m[i], dir:h.wind_direction_10m[i], rain:h.precipitation[i] })),
@@ -668,7 +970,7 @@ try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
-  const {obs, fc, alert, others, sacca, meteo, shyfer, week} = data;
+  const {obs, fc, alert, others, sacca, meteo, shyfer, week, po} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
   const nc = nowcast(obs, fc.latest, now);
@@ -703,7 +1005,8 @@ function render(data){
   // scostamento
   if(last){
     const f = interp(fc.latest,last.t) ?? interp(fc.prev,last.t);
-    if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit'; }
+    if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
+      $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`; }
   }
   // 24h osservato
   const o24 = obs.filter(p=>p.t>=now-24*3600e3);
@@ -728,7 +1031,8 @@ function render(data){
     if(meteo.spd && meteo.dir!=null && kmh>=15){ const a=meteo.dir; hint = (a>=70&&a<=170) ? 'Vento da mare (scirocco/levante): tende ad alzare il livello.' : (a>=0&&a<=60)||a>=340 ? 'Bora: mare mosso, livello spesso sotto la previsione.' : (a>=200&&a<=330) ? 'Vento da terra: tende ad abbassare il livello.' : ''; }
     else if(meteo.prs && p3!=null && p3<=-2) hint='Pressione in calo rapido: possibile sovralzo nelle prossime ore.';
     $('meteo').innerHTML = `<div><div class="lbl">Vento</div>${wind}</div><div><div class="lbl">Pressione</div>${prs}</div>` + (hint?`<div class="d" style="grid-column:1/-1;margin-top:0">${hint}</div>`:'') + `<div class="d" style="grid-column:1/-1;margin-top:0">Letture delle ${fmtT(new Date(meteo.time))}.</div>`;
-  } else $('meteo').innerHTML = '<div class="d" style="grid-column:1/-1">Vento e pressione: fonte non raggiungibile.</div>';
+    $('stripWind').innerHTML = meteo.spd ? `<i class="dot ${kmh>=30?'red':kmh>=20?'yellow':'green'}"></i>vento ${kmh} km/h${meteo.dir!=null?' da '+dirName(meteo.dir):''}` : '<i class="dot"></i>vento n.d.';
+  } else { $('meteo').innerHTML = '<div class="d" style="grid-column:1/-1">Vento e pressione: fonte non raggiungibile.</div>'; $('stripWind').innerHTML = '<i class="dot"></i>vento n.d.'; }
   // previsione 48h (corretta)
   const f48 = fcUse.filter(p=>p.t>=now&&p.t<=now+48*3600e3);
   if(f48.length){
@@ -748,7 +1052,9 @@ function render(data){
       <div class="row"><span>Vento</span>${pill(z.vento)}</div>
       <div class="row"><span>Piene dei fiumi</span>${pill(z.idraulica)}</div>
       <div class="d" style="margin-top:8px">${alert.titolo||''}${alert.link?` · <a href="https://allertameteo.regione.emilia-romagna.it${alert.link}" target="_blank" rel="noopener">PDF</a>`:''}</div>`;
-  }
+    const lv={green:0,yellow:1,orange:2,red:3}; const worst=['mareggiate','stato_mare','vento','idraulica'].reduce((w,k)=>Math.max(w, lv[z[k]]||0), 0);
+    $('stripAlert').innerHTML = `<i class="dot ${['green','yellow','orange','red'][worst]}"></i>allerta ${['verde','gialla','arancione','rossa'][worst]}`;
+  } else $('stripAlert').innerHTML = '<i class="dot"></i>allerta n.d.';
   // altri mareografi
   if(!others) $('others').innerHTML = '<div class="d">Fonte non raggiungibile, riprovo tra poco.</div>';
   if(others){
@@ -759,6 +1065,8 @@ function render(data){
   }
   // Shyfer
   shyState.ext = ext; renderShyfer();
+  // Po
+  try{ renderPo(po); }catch(e){ $('po').innerHTML='<div class="d">Calcolo non riuscito.</div>'; }
   // orari di pesca
   fishState.week = week || fishState.week; try{ renderFish(); }catch(e){ $('fish').innerHTML = '<div class="none">Calcolo non riuscito.</div>'; }
   // sacca
@@ -887,9 +1195,11 @@ function renderFish(){
   const dirName = a => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
   const fmtDay = new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'short',timeZone:TZ});
   const dur = ms => { const m=Math.round(ms/60e3); return m>=60 ? `${Math.floor(m/60)} h${m%60?' '+String(m%60).padStart(2,'0'):''}` : `${m} min`; };
-  let html = '', preview = null;
+  let html = '', preview = null, shown = 0;
   wk.days.forEach((d, di) => {
     const from = d.rise-3600e3, to = d.set+3600e3;
+    if(to < now) return; // giornata finita (dopo tramonto + 1 h): non si mostra più
+    if(++shown > 7) return; // al massimo 7 giorni in elenco
     // finestre: campiono ogni 10 min
     const wins = []; let cur = null;
     for(let t=from; t<=to; t+=600e3){
@@ -967,12 +1277,12 @@ async function load(){
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, am, sacca, week] = await Promise.all([
+  const [obs, fc, alert, am, sacca, week, po] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni')
+    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni'), safe(fetchPo(),'Po')
   ]);
   // Shyfer si scarica solo quando la sua scheda è aperta (vedi toggle); se già scaricato in questa sessione, resta
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week};
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week, po};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
@@ -991,6 +1301,21 @@ applyTheme(theme);
 $('themeBtn').addEventListener('click', ()=>{ const dark = document.documentElement.getAttribute('data-theme')==='dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches); theme = dark?'light':'dark'; try{ localStorage.setItem('theme',theme); }catch(e){} applyTheme(theme); });
 $('chartToggle').addEventListener('click', ()=>{ chartDetails=!chartDetails; try{ localStorage.setItem('chart-details', chartDetails?'1':'0'); }catch(e){} if(lastData) render(lastData); });
 let lastData=null; const _render=render; render=function(d){ lastData=d; _render(d); };
+/* ---------- schede: barra in basso, ricordata tra un'apertura e l'altra ---------- */
+const TABS=['marea','pesca','meteo','po'];
+let curTab='marea'; try{ const t=localStorage.getItem('tab'); if(TABS.includes(t)) curTab=t; }catch(e){}
+function showTab(t, save){
+  if(!TABS.includes(t)) t='marea'; curTab=t;
+  document.body.setAttribute('data-tab', t);
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on', b.dataset.go===t));
+  if(save!==false){ try{ localStorage.setItem('tab', t); }catch(e){} window.scrollTo(0,0); }
+  if(t==='marea' && lastData){ try{ render(lastData); }catch(e){} } // il grafico si misura sulla larghezza reale
+  if(t==='po') activatePo();
+}
+async function activatePo(){ if(!pvState.po) return; if(!pvState.hist){ try{ pvState.hist = await fetchPoHist(); }catch(e){ pvState.hist={}; } } drawPoMap(); }
+document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click', ()=>showTab(b.dataset.go)));
+$('strip').addEventListener('click', ()=>showTab('meteo'));
+showTab(curTab, false);
 let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(lastData) try{ render(lastData); }catch(e){} }, 150); });
 // tornando sull'app si aggiorna, ma non più di una volta al minuto (i dati cambiano ogni 10 minuti)
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && Date.now()-lastLoadAt>60e3) load(); });
