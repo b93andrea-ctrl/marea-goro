@@ -689,7 +689,7 @@ function renderPo(po){
 async function fetchWeek(){
   // vento, raffiche, pioggia ora per ora e alba/tramonto per 7 giorni sul mare davanti a Goro (Open-Meteo, ~7 KB);
   // cambia poco: lo riuso per un'ora
-  try{ const c=JSON.parse(localStorage.getItem('week-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data) return c.data; }catch(e){}
+  try{ const c=JSON.parse(localStorage.getItem('week-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data && c.data.days && c.data.days.length>=8) return c.data; }catch(e){} // dati vecchi a 7 giorni: si riscaricano
   const j = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=44.79&longitude=12.33&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&daily=sunrise,sunset&timezone=UTC&forecast_days=8&wind_speed_unit=kmh'); // 8 giorni: così dopo il tramonto restano sempre 7 giorni in elenco
   const h=j.hourly, d=j.daily;
   const data = {
