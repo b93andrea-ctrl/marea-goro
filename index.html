@@ -287,15 +287,15 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <div id="sacca"></div>
   </div>
 
-  <div class="card wide">
-    <h2>Orari di pesca · 7 giorni</h2>
+  <details class="card wide shy" id="fishBox">
+    <summary><span class="h">Orari di pesca · 7 giorni</span><span class="pv" id="fishSummary">apri per le finestre di pesca</span></summary>
     <div class="fishctl">
       <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
       <span class="d">dentro la Sacca (Porto Garibaldi +45 min), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
     </div>
     <div id="fish"></div>
     <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
-  </div>
+  </details>
 
 </section>
 
@@ -874,20 +874,20 @@ document.querySelectorAll('.windyctl button').forEach(b=>b.addEventListener('cli
 /* ---------- orari di pesca: finestre con livello tra due soglie, di giorno, per 7 giorni ----------
    Livello: fino a ~48 h la curva usata dal grafico (misurato → stima → Adriac corretta), poi marea astronomica.
    Giorno: da 1 h prima dell'alba a 1 h dopo il tramonto (Open-Meteo). Per ogni finestra: vento e raffiche massimi,
-   direzione, pioggia; giudizio: buona (vento < 20 e raffiche < 30 km/h, pioggia < 1 mm/h), media (vento < 30), sconsigliata. */
+   direzione, pioggia; giudizio: favorevole (vento < 20 e raffiche < 30 km/h, pioggia < 1 mm/h), vento moderato (vento < 30), condizioni difficili. */
 let fishState = { week:null, lo:-20, hi:20 };
 try{ const c=JSON.parse(localStorage.getItem('fish-range')||'null'); if(c){ fishState.lo=c.lo; fishState.hi=c.hi; } }catch(e){}
 function renderFish(){
   const el = $('fish'); $('fishLo').value = fishState.lo; $('fishHi').value = fishState.hi;
   const wk = fishState.week;
-  if(!wk || !chartGeom){ el.innerHTML = '<div class="none">Previsione meteo non disponibile al momento.</div>'; return; }
+  if(!wk || !chartGeom){ el.innerHTML = '<div class="none">Previsione meteo non disponibile al momento.</div>'; $('fishSummary').textContent='previsione non disponibile'; return; }
   const now = Date.now(), lo = fishState.lo/100, hi = fishState.hi/100;
   const lvl = t => { const r = goroEstimate(t); return r ? r.v : null; }; // livello dentro la Sacca: Porto Garibaldi spostato di 45 min
   const wAt = t => { const h = wk.hours; if(!h.length || t<h[0].t || t>h[h.length-1].t) return null; const i = Math.min(h.length-2, Math.max(0, Math.floor((t-h[0].t)/3600e3))); return h[i]; };
   const dirName = a => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
   const fmtDay = new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'short',timeZone:TZ});
   const dur = ms => { const m=Math.round(ms/60e3); return m>=60 ? `${Math.floor(m/60)} h${m%60?' '+String(m%60).padStart(2,'0'):''}` : `${m} min`; };
-  let html = '';
+  let html = '', preview = null;
   wk.days.forEach((d, di) => {
     const from = d.rise-3600e3, to = d.set+3600e3;
     // finestre: campiono ogni 10 min
@@ -908,18 +908,20 @@ function renderFish(){
       const dir = dirs.length ? dirName(dirs[Math.floor(dirs.length/2)]) : '';
       const cls = (spd>=30||gust>=45) ? 'bad' : (spd>=20||gust>=30||rain>=1) ? 'meh' : 'ok';
       const notes = [];
-      if(spd>=30||gust>=45) notes.push(`vento forte ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: sconsigliato`);
-      else if(spd>=20||gust>=30) notes.push(`vento ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: può dare fastidio`);
+      if(spd>=30||gust>=45) notes.push(`vento forte ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: condizioni difficili`);
+      else if(spd>=20||gust>=30) notes.push(`vento ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: vento moderato`);
       else if(n) notes.push(`vento ${Math.round(spd)} km/h da ${dir}`);
       if(rain>=1) notes.push(`pioggia ${rain.toFixed(rain<10?1:0).replace('.',',')} mm`);
       const seaWind = dirs.length && (dirs[Math.floor(dirs.length/2)]>=60 && dirs[Math.floor(dirs.length/2)]<=170) && spd>=15;
       if(seaWind && !astroOnly) notes.push('vento da mare: il livello può salire più del previsto');
       if(w.a<=now && w.b>=now) notes.unshift('in corso');
+      if(!preview) preview = `${di===0?'oggi':di===1?'domani':fmtD(new Date(w.a))} ${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}${cls==='ok'?'':cls==='meh'?' · vento moderato':' · condizioni difficili'}`;
       html += `<div class="w ${cls}"><b>${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}</b><span>${dur(w.b-w.a)} · ${m(w.vmin)}…${m(w.vmax)} m<br><span class="i">${notes.join(' · ')}</span></span></div>`;
     }
     html += '</div>';
   });
   el.innerHTML = `<div class="fish">${html}</div>`;
+  $('fishSummary').textContent = preview ? `prossima finestra: ${preview}` : 'nessuna finestra di almeno 2 ore nei prossimi 7 giorni';
 }
 function saveFishRange(){
   let lo=+$('fishLo').value, hi=+$('fishHi').value; if(isNaN(lo)||isNaN(hi)) return; if(lo>hi){ const t=lo; lo=hi; hi=t; }
