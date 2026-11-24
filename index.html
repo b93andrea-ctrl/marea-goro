@@ -91,11 +91,24 @@ details.shy[open] summary{margin-bottom:10px;padding-bottom:6px;border-bottom:1p
 .shyleg{display:flex;flex-wrap:wrap;gap:4px 8px;margin:8px 0 10px;font-size:.66rem;color:var(--muted)}
 .shyleg span{display:inline-flex;align-items:center;gap:3px}
 .shyleg i{display:inline-block;width:12px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
+.fishctl{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-bottom:8px;font-size:.82rem}
+.fishctl input{font:inherit;font-family:var(--display);font-size:1rem;width:4.2em;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:8px;padding:4px 6px;text-align:center}
+.fishctl .d{margin:0}
+.fish .fd{padding:8px 0;border-top:1px solid var(--line)}
+.fish .fd:first-child{border-top:0;padding-top:0}
+.fish .fd.today h3{color:var(--sea)}
+.fish h3{margin:0 0 4px;font-family:var(--display);font-size:.8rem;font-weight:600;text-transform:capitalize}
+.fish h3 small{display:block;font-family:var(--font);font-weight:500;font-size:.72rem;color:var(--muted);text-transform:none;margin-top:1px}
+.fish .w{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:baseline;font-size:.86rem;padding:3px 0}
+.fish .w b{font-family:var(--display);font-size:1.05rem;font-weight:500;white-space:nowrap}
+.fish .w .i{color:var(--muted);font-size:.78rem}
+.fish .w.ok b{color:var(--sea)} .fish .w.meh b{color:var(--sand)} .fish .w.bad b{color:var(--crit)}
+.fish .none{font-size:.82rem;color:var(--muted)}
 .windyctl{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
 .windyctl button{padding:6px 10px;font-size:.78rem;border-radius:999px}
 .windyctl button.on{background:var(--sea);color:#fff;border-color:var(--sea)}
 .windy{position:relative;border-radius:10px;overflow:hidden;background:var(--line);aspect-ratio:4/5;max-height:70vh}
-.windy iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.windy iframe{position:absolute;inset:0;width:100%;height:100%;border:0;touch-action:pan-x pinch-zoom}
 .meteo{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
 .meteo .mv{font-family:var(--display);font-size:1.25rem;font-weight:400;color:var(--fg);line-height:1.2}
 .meteo .mv small{font-family:var(--font);font-size:.75rem;color:var(--muted);font-weight:500}
@@ -274,6 +287,15 @@ input[type=date]{font:inherit;border:1px solid var(--line);background:var(--card
     <div id="sacca"></div>
   </div>
 
+  <div class="card wide">
+    <h2>Orari di pesca · 7 giorni</h2>
+    <div class="fishctl">
+      <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
+      <span class="d">dentro la Sacca (Porto Garibaldi +45 min), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
+    </div>
+    <div id="fish"></div>
+    <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
+  </div>
 
 </section>
 
@@ -361,6 +383,19 @@ async function fetchAllertameteo(){
     slot -= 1800e3;
   }
   return { others:null, meteo:null };
+}
+async function fetchWeek(){
+  // vento, raffiche, pioggia ora per ora e alba/tramonto per 7 giorni sul mare davanti a Goro (Open-Meteo, ~7 KB);
+  // cambia poco: lo riuso per un'ora
+  try{ const c=JSON.parse(localStorage.getItem('week-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data) return c.data; }catch(e){}
+  const j = await getJSON('https://api.open-meteo.com/v1/forecast?latitude=44.79&longitude=12.33&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation&daily=sunrise,sunset&timezone=UTC&forecast_days=7&wind_speed_unit=kmh');
+  const h=j.hourly, d=j.daily;
+  const data = {
+    hours: h.time.map((ts,i)=>({ t:Date.parse(ts+'Z'), spd:h.wind_speed_10m[i], gust:h.wind_gusts_10m[i], dir:h.wind_direction_10m[i], rain:h.precipitation[i] })),
+    days: d.time.map((ds,i)=>({ key:ds, rise:Date.parse(d.sunrise[i]+'Z'), set:Date.parse(d.sunset[i]+'Z') }))
+  };
+  try{ localStorage.setItem('week-cache', JSON.stringify({at:Date.now(), data})); }catch(e){}
+  return data;
 }
 async function fetchShyfer(){
   // mappe orarie del modello Shyfer (SHYFEM) sulla Sacca: 72 PNG per emissione, colori a scatti di 0,2 m
@@ -633,7 +668,7 @@ try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
-  const {obs, fc, alert, others, sacca, meteo, shyfer} = data;
+  const {obs, fc, alert, others, sacca, meteo, shyfer, week} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
   const nc = nowcast(obs, fc.latest, now);
@@ -724,6 +759,8 @@ function render(data){
   }
   // Shyfer
   shyState.ext = ext; renderShyfer();
+  // orari di pesca
+  fishState.week = week || fishState.week; try{ renderFish(); }catch(e){ $('fish').innerHTML = '<div class="none">Calcolo non riuscito.</div>'; }
   // sacca
   if(sacca&&sacca.length){
     const n1 = v => v==null?'–':v.toFixed(1).replace('.',',');
@@ -834,6 +871,64 @@ function loadWindy(){ const f=$('windyFrame'); const u=windyUrl(windyOverlay); i
 $('windyBox').addEventListener('toggle', ()=>{ if($('windyBox').open) loadWindy(); });
 document.querySelectorAll('.windyctl button').forEach(b=>b.addEventListener('click', ()=>{ document.querySelectorAll('.windyctl button').forEach(x=>x.classList.toggle('on', x===b)); windyOverlay=b.dataset.ov; loadWindy(); }));
 
+/* ---------- orari di pesca: finestre con livello tra due soglie, di giorno, per 7 giorni ----------
+   Livello: fino a ~48 h la curva usata dal grafico (misurato → stima → Adriac corretta), poi marea astronomica.
+   Giorno: da 1 h prima dell'alba a 1 h dopo il tramonto (Open-Meteo). Per ogni finestra: vento e raffiche massimi,
+   direzione, pioggia; giudizio: buona (vento < 20 e raffiche < 30 km/h, pioggia < 1 mm/h), media (vento < 30), sconsigliata. */
+let fishState = { week:null, lo:-20, hi:20 };
+try{ const c=JSON.parse(localStorage.getItem('fish-range')||'null'); if(c){ fishState.lo=c.lo; fishState.hi=c.hi; } }catch(e){}
+function renderFish(){
+  const el = $('fish'); $('fishLo').value = fishState.lo; $('fishHi').value = fishState.hi;
+  const wk = fishState.week;
+  if(!wk || !chartGeom){ el.innerHTML = '<div class="none">Previsione meteo non disponibile al momento.</div>'; return; }
+  const now = Date.now(), lo = fishState.lo/100, hi = fishState.hi/100;
+  const lvl = t => { const r = goroEstimate(t); return r ? r.v : null; }; // livello dentro la Sacca: Porto Garibaldi spostato di 45 min
+  const wAt = t => { const h = wk.hours; if(!h.length || t<h[0].t || t>h[h.length-1].t) return null; const i = Math.min(h.length-2, Math.max(0, Math.floor((t-h[0].t)/3600e3))); return h[i]; };
+  const dirName = a => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
+  const fmtDay = new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'short',timeZone:TZ});
+  const dur = ms => { const m=Math.round(ms/60e3); return m>=60 ? `${Math.floor(m/60)} h${m%60?' '+String(m%60).padStart(2,'0'):''}` : `${m} min`; };
+  let html = '';
+  wk.days.forEach((d, di) => {
+    const from = d.rise-3600e3, to = d.set+3600e3;
+    // finestre: campiono ogni 10 min
+    const wins = []; let cur = null;
+    for(let t=from; t<=to; t+=600e3){
+      const v = lvl(t); const inRange = v!=null && v>=lo && v<=hi && t>=now-600e3;
+      if(inRange){ if(!cur) cur={a:t, b:t, vmin:v, vmax:v}; else { cur.b=t; cur.vmin=Math.min(cur.vmin,v); cur.vmax=Math.max(cur.vmax,v); } }
+      else if(cur){ wins.push(cur); cur=null; }
+    }
+    if(cur) wins.push(cur);
+    const good = wins.filter(w=>w.b-w.a>=2*3600e3); // sotto le 2 ore non vale la pena
+    const astroOnly = from > now+46*3600e3;
+    html += `<div class="fd${di===0?' today':''}"><h3><span>${fmtDay.format(new Date(d.rise))}</span><small>alba ${fmtT(new Date(d.rise))} · tramonto ${fmtT(new Date(d.set))}${astroOnly?' · solo astronomica':''}</small></h3>`;
+    if(!good.length){ html += `<div class="none">${to<now?'Giornata passata.':(wins.length?'Nessuna finestra di almeno 2 ore.':'Nessuna finestra: di giorno il livello resta fuori dalle soglie.')}</div></div>`; return; }
+    for(const w of good){
+      let spd=0, gust=0, rain=0, dirs=[], n=0;
+      for(let t=w.a; t<=w.b; t+=3600e3){ const h=wAt(t); if(!h) continue; spd=Math.max(spd,h.spd||0); gust=Math.max(gust,h.gust||0); rain+=h.rain||0; dirs.push(h.dir); n++; }
+      const dir = dirs.length ? dirName(dirs[Math.floor(dirs.length/2)]) : '';
+      const cls = (spd>=30||gust>=45) ? 'bad' : (spd>=20||gust>=30||rain>=1) ? 'meh' : 'ok';
+      const notes = [];
+      if(spd>=30||gust>=45) notes.push(`vento forte ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: sconsigliato`);
+      else if(spd>=20||gust>=30) notes.push(`vento ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: può dare fastidio`);
+      else if(n) notes.push(`vento ${Math.round(spd)} km/h da ${dir}`);
+      if(rain>=1) notes.push(`pioggia ${rain.toFixed(rain<10?1:0).replace('.',',')} mm`);
+      const seaWind = dirs.length && (dirs[Math.floor(dirs.length/2)]>=60 && dirs[Math.floor(dirs.length/2)]<=170) && spd>=15;
+      if(seaWind && !astroOnly) notes.push('vento da mare: il livello può salire più del previsto');
+      if(w.a<=now && w.b>=now) notes.unshift('in corso');
+      html += `<div class="w ${cls}"><b>${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}</b><span>${dur(w.b-w.a)} · ${m(w.vmin)}…${m(w.vmax)} m<br><span class="i">${notes.join(' · ')}</span></span></div>`;
+    }
+    html += '</div>';
+  });
+  el.innerHTML = `<div class="fish">${html}</div>`;
+}
+function saveFishRange(){
+  let lo=+$('fishLo').value, hi=+$('fishHi').value; if(isNaN(lo)||isNaN(hi)) return; if(lo>hi){ const t=lo; lo=hi; hi=t; }
+  fishState.lo=Math.max(-80,Math.min(80,lo)); fishState.hi=Math.max(-80,Math.min(80,hi));
+  try{ localStorage.setItem('fish-range', JSON.stringify({lo:fishState.lo, hi:fishState.hi})); }catch(e){}
+  renderFish();
+}
+$('fishLo').addEventListener('change', saveFishRange); $('fishHi').addEventListener('change', saveFishRange);
+
 /* ---------- calendario astronomico ---------- */
 function romeDayStart(dateStr){ // 'YYYY-MM-DD' → ms della mezzanotte locale (Europe/Rome)
   const [y,mo,d]=dateStr.split('-').map(Number);
@@ -849,14 +944,13 @@ function renderAstro(){
   const ex=astroExtrema(start, start+7*86400e3);
   const fmtDay=new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',month:'short',timeZone:TZ});
   const dayKey=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'});
-  let html='';
-  for(let i=0;i<7;i++){
+  const dayHtml = i => {
     const d0=start+i*86400e3, key=dayKey.format(new Date(d0));
     const es=ex.filter(e=>dayKey.format(new Date(e.t))===key);
-    html+=`<div class="day${key===today?' today':''}"><h3>${fmtDay.format(new Date(d0))}</h3>`+
+    return `<div class="day${key===today?' today':''}"><h3>${fmtDay.format(new Date(d0))}</h3>`+
       (es.length?es.map(e=>`<div class="e ${e.type}"><span class="k">${e.type}</span><b>${fmtT(new Date(e.t))}</b><span>${m(e.v)} m</span></div>`).join(''):'<div class="e"><span>marea piatta</span></div>')+`</div>`;
-  }
-  $('astroCal').innerHTML=html;
+  };
+  $('astroCal').innerHTML = [0,1,2,3,4,5,6].map(dayHtml).join('');
 }
 $('astroDate').addEventListener('change', renderAstro);
 $('astroToday').addEventListener('click', ()=>{ $('astroDate').value=todayStr(); renderAstro(); });
@@ -871,12 +965,12 @@ async function load(){
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, am, sacca] = await Promise.all([
+  const [obs, fc, alert, am, sacca, week] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca')
+    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni')
   ]);
   // Shyfer si scarica solo quando la sua scheda è aperta (vedi toggle); se già scaricato in questa sessione, resta
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data};
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
