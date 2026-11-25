@@ -1,0 +1,40 @@
+# Archivio giornaliero delle previsioni e ritaratura mensile del modello meteo dell'app.
+# Gira sui server di GitHub: non serve tenere acceso nulla.
+name: Archivio e taratura
+
+on:
+  schedule:
+    - cron: '40 11 * * *'   # ogni giorno alle 11:40 UTC (l'emissione Adriac delle 00 è pubblicata verso le 10)
+    - cron: '20 3 2 * *'    # il 2 di ogni mese: ritaratura del modello
+  workflow_dispatch:         # avvio a mano dalla pagina Actions del repository (fa anche la ritaratura)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archivio
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Archivio giornaliero
+        run: node scripts/archivio.mjs
+      - name: Ritaratura mensile
+        if: github.event.schedule == '20 3 2 * *' || github.event_name == 'workflow_dispatch'
+        run: node scripts/calibra.mjs
+      - name: Salva nel repository
+        run: |
+          git config user.name "marea-goro-archivio"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "niente di nuovo"; exit 0; fi
+          git commit -m "Archivio $(date -u +%Y-%m-%d)"
+          git pull --rebase origin main
+          git push origin main

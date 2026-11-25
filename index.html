@@ -232,6 +232,7 @@ body{padding-bottom:76px}
     <div class="big" id="levelNow">–<small> m</small></div>
     <div class="trend" id="trend"></div>
     <div class="chip" id="surgeChip" hidden></div>
+    <div class="chip" id="fcChip" hidden></div>
     <div class="next" id="nextExt"></div>
   </div>
   <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Livello del mare osservato e previsto"></svg>
@@ -251,7 +252,7 @@ body{padding-bottom:76px}
 
 <section class="grid">
   <div class="card wide">
-    <h2>Prossime alte e basse previste (Adriac corretta, Porto Garibaldi)</h2>
+    <h2>Prossime alte e basse previste (Porto Garibaldi)</h2>
     <div class="extrema" id="extrema"></div>
     <div class="d">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
   </div>
@@ -435,7 +436,25 @@ async function fetchForecast(){
   const st = j._items[0].stazioni['Porto Garibaldi'];
   const keys = Object.keys(st.previsioni).sort();
   const conv = arr => arr.map(p=>({t:new Date(p[0]).getTime(), v:p[1]}));
-  return { latest: conv(st.previsioni[keys[keys.length-1]]), prev: keys.length>1?conv(st.previsioni[keys[keys.length-2]]):[], emission: new Date(keys[keys.length-1]), updated: j._items[0]._updated };
+  const emissions = keys.map(k=>({t0:new Date(k).getTime(), series:conv(st.previsioni[k])})); // tutte e tre le emissioni disponibili
+  return { latest: emissions[emissions.length-1].series, prev: emissions.length>1?emissions[emissions.length-2].series:[], emissions, emission: new Date(keys[keys.length-1]), updated: j._items[0]._updated };
+}
+async function fetchMet(){
+  // pressione e vento ora per ora (ECMWF via Open-Meteo) sui tre punti del modello, 3 giorni passati + 4 futuri; riusati per un'ora
+  try{ const c=JSON.parse(localStorage.getItem('met-cache')||'null'); if(c && Date.now()-c.at<3600e3 && c.data) return c.data; }catch(e){}
+  const P = MODEL.points;
+  const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${P.map(p=>p[0]).join(',')}&longitude=${P.map(p=>p[1]).join(',')}&hourly=pressure_msl,wind_speed_10m,wind_direction_10m&models=ecmwf_ifs025&past_days=3&forecast_days=4&timezone=UTC&wind_speed_unit=ms`);
+  const arr = Array.isArray(j)?j:[j];
+  const data = arr.map(p=>{ const h=p.hourly; return h.time.map((ts,i)=>[Date.parse(ts+'Z'), h.pressure_msl[i], h.wind_speed_10m[i], h.wind_direction_10m[i]]).filter(r=>r[1]!=null&&r[2]!=null&&r[3]!=null); });
+  try{ localStorage.setItem('met-cache', JSON.stringify({at:Date.now(), data})); }catch(e){}
+  return data;
+}
+async function fetchModel(){ // coefficienti ritarati ogni mese dall'archivio automatico su GitHub (data/model.json); altrimenti quelli incorporati
+  // prima dal repository (aggiornato subito dalla ritaratura), poi dal sito pubblicato
+  const ok = m => m && Array.isArray(m.C) && m.C.length===27 && Array.isArray(m.PERS) && m.PERS.length>=73;
+  for(const u of ['https://raw.githubusercontent.com/b93andrea-ctrl/marea-goro/main/data/model.json', 'data/model.json?d='+Math.floor(Date.now()/86400e3)]){
+    try{ const m = await getJSON(u, 8000); if(ok(m)){ MODEL = m; return; } }catch(e){}
+  }
 }
 async function fetchAlert(){ return getJSON(`${AM}o/get-stato-allerta`); }
 // allertameteo mette in cache l'intestazione CORS per URL con la prima origine che la chiede: un parametro in più
@@ -814,6 +833,65 @@ function correctedForecast(obs, fc, now, nc){
   return { series, offW, offNow: offNc };
 }
 
+/* ---------- modello meteo nostro: marea astronomica + effetto di pressione e vento + sessa ----------
+   Tarato il 25/11/2026 su 2024-2025 (livelli Arpae orari, meteo ERA5 su tre punti dell'Adriatico) e provato su tutto il 2026
+   con le previsioni ECMWF reali fatte 1-2 giorni prima: errore medio 3,1 cm a +1 h, 4,2 a +3 h, 5,1 a +6 h, 5,2 a +24 h,
+   6,4 a +48 h (marea astronomica sola 10,6; Adriac grezza ~12-13). Scarto residuo: livello − astronomica − meteo; la sua parte
+   ancora presente viene proiettata in avanti con coefficienti per ogni ora d'anticipo (decadimento + oscillazione di ~22 h).
+   I coefficienti vengono ritarati ogni mese da GitHub (data/model.json); questi sono quelli di partenza. */
+const MODEL_DEFAULT = {"version":1,"fitted":"2026-11-25","points":[[44.79,12.4],[43.5,14.5],[41.8,16.8]],"windows":[[0,6],[6,12],[12,24],[24,48]],"C":[0.01741,0.92596,0.18054,-0.21545,-0.11996,0.00269,0.03644,-0.0099,-0.08012,0.00934,-0.01553,-0.0291,0.04242,-0.0392,0.03115,0.01682,-0.01887,-0.07861,0.00434,-0.01066,0.00001,0.00335,-0.00871,0.01319,0.01599,0.03184,0.01174],"PERS":[[1,0,0],[0.738,-0.017,0.066],[0.661,0.03,0.122],[0.559,0.055,0.189],[0.43,0.071,0.265],[0.351,0.073,0.341],[0.261,0.08,0.41],[0.194,0.056,0.471],[0.173,0.016,0.51],[0.177,-0.041,0.517],[0.193,-0.114,0.505],[0.251,-0.199,0.461],[0.302,-0.284,0.404],[0.382,-0.368,0.326],[0.468,-0.432,0.247],[0.547,-0.467,0.163],[0.619,-0.483,0.083],[0.671,-0.456,0.03],[0.699,-0.409,-0.004],[0.713,-0.339,-0.027],[0.703,-0.258,-0.017],[0.664,-0.169,0.005],[0.611,-0.082,0.034],[0.549,-0.021,0.072],[0.477,0.029,0.128],[0.394,0.069,0.187],[0.337,0.069,0.228],[0.268,0.063,0.28],[0.21,0.044,0.314],[0.169,0.021,0.356],[0.156,-0.025,0.378],[0.158,-0.082,0.377],[0.18,-0.125,0.36],[0.218,-0.182,0.331],[0.252,-0.224,0.296],[0.314,-0.282,0.241],[0.381,-0.322,0.184],[0.438,-0.338,0.127],[0.476,-0.337,0.083],[0.513,-0.321,0.043],[0.523,-0.29,0.021],[0.535,-0.242,0.008],[0.528,-0.185,0.015],[0.502,-0.128,0.019],[0.462,-0.077,0.046],[0.413,-0.027,0.079],[0.363,0.005,0.115],[0.312,0.028,0.152],[0.264,0.034,0.196],[0.21,0.04,0.23],[0.177,0.023,0.261],[0.159,-0.01,0.269],[0.152,-0.043,0.276],[0.156,-0.079,0.273],[0.183,-0.126,0.256],[0.204,-0.169,0.227],[0.243,-0.206,0.198],[0.276,-0.223,0.164],[0.317,-0.242,0.123],[0.345,-0.245,0.1],[0.383,-0.24,0.064],[0.392,-0.214,0.05],[0.406,-0.19,0.039],[0.401,-0.16,0.029],[0.385,-0.118,0.035],[0.371,-0.092,0.045],[0.338,-0.051,0.068],[0.307,-0.033,0.083],[0.275,-0.014,0.111],[0.236,0.002,0.135],[0.198,0.006,0.166],[0.177,0.004,0.187],[0.156,-0.014,0.205]],"blend":0.7};
+let MODEL = MODEL_DEFAULT;
+function ourForecast(obs, met, now){
+  if(!met || met.length<3 || !obs.length) return null;
+  const H=3600e3, M=MODEL;
+  const maps = met.map(rows=>{ const mp=new Map(); for(const [t,P,s,d] of rows){ const to=(d+180)*D2R; mp.set(t,{P, su:s*s*Math.sin(to), sv:s*s*Math.cos(to)}); } return mp; });
+  function feat(t){ // t all'ora intera; solo valori fino a t
+    const f=[1]; let pg=0; for(let k=0;k<=3;k++){ const x=maps[0].get(t-k*H); if(!x) return null; pg+=x.P; } f.push(-(pg/4-1013)/100);
+    let gr=0; for(let k=0;k<12;k++){ const a=maps[2].get(t-k*H), b=maps[0].get(t-k*H); if(!a||!b) return null; gr+=a.P-b.P; } f.push(gr/12/100);
+    for(let p=0;p<3;p++) for(const [w0,w1] of M.windows){ let su=0,sv=0,c=0; for(let k=w0;k<w1;k++){ const x=maps[p].get(t-k*H); if(!x) return null; su+=x.su; sv+=x.sv; c++; } f.push(su/c/100, sv/c/100); }
+    return f; }
+  const memo=new Map(); const meteoH=t=>{ if(!memo.has(t)){ const f=feat(t); memo.set(t, f? f.reduce((s,v,i)=>s+v*M.C[i],0) : null); } return memo.get(t); };
+  const meteo=t=>{ const a=Math.floor(t/H)*H, ma=meteoH(a), mb=meteoH(a+H); if(ma==null||mb==null) return ma??mb; return ma+(mb-ma)*(t-a)/H; };
+  // scarto residuo medio sugli ultimi 30 min (il radar ha qualche cm di rumore), e 6 e 12 ore prima
+  const last=obs[obs.length-1].t;
+  const eAvg=t0=>{ let s=0,n=0; for(const p of obs){ if(p.t>t0-35*60e3 && p.t<=t0+5*60e3){ const mm=meteo(p.t); if(mm!=null){ s+=p.v-astro(p.t)-mm; n++; } } } return n? s/n : null; };
+  const e0=eAvg(last); if(e0==null) return null;
+  const e6=eAvg(last-6*H) ?? e0, e12=eAvg(last-12*H) ?? 0;
+  const pers=L=>{ const Lc=Math.max(0,Math.min(72,L)), i=Math.floor(Lc), fr=Lc-i, a=M.PERS[i], b=M.PERS[Math.min(72,i+1)]; const c=[0,1,2].map(k=>a[k]+(b[k]-a[k])*fr); return c[0]*e0+c[1]*(e0-e6)+c[2]*e12; };
+  const series=[]; for(let t=Math.ceil(last/1200e3)*1200e3; t<=last+72*H; t+=1200e3){ const mm=meteo(t); if(mm==null) break; series.push({t, v:astro(t)+mm+pers((t-last)/H)}); }
+  return series.length>3 ? { series, e0, last } : null;
+}
+/* ---------- le tre emissioni Adriac pesate su quanto hanno sbagliato nelle ultime 12 ore ----------
+   (il 25/11/2026 l'emissione delle 00 sbagliava di 40-65 cm su tutta la costa mentre quella del giorno prima teneva 11 cm) */
+function blendAdriac(obs, fc, now){
+  const ems=(fc.emissions||[]).filter(e=>e.series.length);
+  if(ems.length<2) return { series: fc.latest, maeLatest:null, mae:null, weights:null, ems };
+  const win=obs.filter(p=>p.t>=now-12*3600e3);
+  const stat=ems.map(e=>{ let s=0,n=0; for(const p of win){ const v=interp(e.series,p.t); if(v!=null){ s+=Math.abs(p.v-v); n++; } } return n>=6? s/n : null; });
+  const w=stat.map(x=> x==null? 0 : 1/(x*x+0.0009));
+  // media pesata delle emissioni disponibili a ogni istante; quando una finisce, la media si ricalcola sulle restanti
+  // e il salto viene assorbito in 6 ore (le emissioni più vecchie finiscono prima)
+  const lastEm=ems[ems.length-1].series;
+  const blendAt=(t,set)=>{ let s=0,sw=0; for(const i of set){ const v=interp(ems[i].series,t); if(v!=null && w[i]>0){ s+=w[i]*v; sw+=w[i]; } } return sw? s/sw : null; };
+  let prevSet=null, prevT=null, off=0, tOff=null;
+  const series=lastEm.map(p=>{
+    const set=ems.map((e,i)=>i).filter(i=>w[i]>0 && interp(ems[i].series,p.t)!=null);
+    if(prevSet && set.join()!==prevSet.join()){ const a=blendAt(prevT,prevSet), b=blendAt(prevT,set); if(a!=null && b!=null){ off = (tOff!=null? off*Math.exp(-(prevT-tOff)/(6*3600e3)) : 0) + (a-b); tOff=prevT; } }
+    prevSet=set; prevT=p.t;
+    const v0 = blendAt(p.t,set); const v = v0==null? p.v : v0 + (tOff!=null? off*Math.exp(-(p.t-tOff)/(6*3600e3)) : 0);
+    return {t:p.t, v}; });
+  let s=0,n=0; for(const p of win){ const v=interp(series,p.t); if(v!=null){ s+=Math.abs(p.v-v); n++; } }
+  const tot=w.reduce((a,b)=>a+b,0);
+  return { series, maeLatest: stat[stat.length-1], mae: n? s/n : null, weights: tot? w.map(x=>x/tot) : null, ems };
+}
+/* ---------- fusione: nostro modello e Adriac corretta, con avviso quando divergono ---------- */
+function fuseForecast(ours, adr, cf, now){
+  const wA = (!cf || (adr.mae!=null && adr.mae>0.2)) ? 0 : 1-MODEL.blend;
+  if(!ours) return cf ? { series: cf.series, wA:1, dmax:0, src:'adriac' } : null;
+  let dmax=0; const series=ours.series.map(p=>{ const a=cf? interp(cf.series,p.t) : null; if(a!=null && p.t<=now+24*3600e3) dmax=Math.max(dmax, Math.abs(a-p.v)); return {t:p.t, v: a==null? p.v : (1-wA)*p.v + wA*a}; });
+  return { series, wA, dmax, src:'fusa' };
+}
+
 /* ---------- math ---------- */
 function interp(series, t){
   if(!series.length) return null;
@@ -975,15 +1053,27 @@ try{ chartDetails = localStorage.getItem('chart-details')==='1'; }catch(e){}
 
 /* ---------- render ---------- */
 function render(data){
-  const {obs, fc, alert, others, sacca, meteo, shyfer, week, po} = data;
+  const {obs, fc, alert, others, sacca, meteo, shyfer, week, po, met} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
-  const nc = nowcast(obs, fc.latest, now);
-  const cf = correctedForecast(obs, fc, now, nc);
-  // per alte/basse future uso la previsione corretta (se c'è), unita al tratto passato di Adriac per gli estremi vicini ad adesso
-  const fcUse = cf ? fc.latest.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : fc.latest;
+  // 1) le tre emissioni Adriac pesate sugli errori delle ultime 12 h; 2) correzione con le letture; 3) nostro modello meteo; 4) fusione
+  const adr = blendAdriac(obs, fc, now);
+  const fcB = { latest: adr.series, prev: fc.prev };
+  const nc = nowcast(obs, adr.series, now);
+  const cfA = correctedForecast(obs, fcB, now, nc);
+  let ours=null; try{ ours = ourForecast(obs, met, now); }catch(e){ ours=null; }
+  const fused = fuseForecast(ours, adr, cfA, now);
+  const cf = fused ? { series: fused.series, offW: cfA?cfA.offW:0 } : cfA;
+  // per alte/basse future uso la previsione combinata, unita al tratto passato di Adriac per gli estremi vicini ad adesso
+  const fcUse = cf ? adr.series.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : adr.series;
   const ext = extrema(fcUse, now-3600e3);
   drawChart(obs, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf);
+  // avviso di affidabilità: ultima emissione scartata, o nostro modello e Adriac in disaccordo
+  const fchip=$('fcChip');
+  const badLatest = adr.maeLatest!=null && adr.maeLatest>0.25;
+  if(fused && fused.dmax>0.25){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`previsioni in disaccordo fino a ${Math.round(fused.dmax*100)} cm: affidabilità bassa`; }
+  else if(badLatest){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`ultima Adriac fuori strada (${Math.round(adr.maeLatest*100)} cm): uso le precedenti e il modello meteo`; }
+  else fchip.hidden=true;
 
   if(last){
     const ago = Math.round((now-last.t)/60e3);
@@ -1009,7 +1099,7 @@ function render(data){
 
   // scostamento
   if(last){
-    const f = interp(fc.latest,last.t) ?? interp(fc.prev,last.t);
+    const f = interp(adr.series,last.t) ?? interp(fc.prev,last.t);
     if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
       $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`;
       const chip=$('surgeChip'); const big=Math.abs(s)>=0.08;
@@ -1048,7 +1138,10 @@ function render(data){
     $('fcMax').innerHTML = `${m(mx.v)}<small> m</small>`; $('fcMax').style.color = mx.v>=0.8?'var(--crit)':mx.v>=0.7?'var(--warn)':'inherit';
     $('fcMaxWhen').textContent = fmtDT(new Date(mx.t));
     $('fcMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('fcMinWhen').textContent = fmtDT(new Date(mn.t));
-    $('fcEmission').textContent = `Emissione Adriac di ${fmtD(fc.emission)}.`;
+    const wTxt = (adr.weights && adr.ems) ? adr.ems.map((e,i)=>`${fmtD(new Date(e.t0))} ${Math.round(adr.weights[i]*100)} %`).join(', ') : `${fmtD(fc.emission)}`;
+    $('fcEmission').textContent = fused && fused.src==='fusa'
+      ? `Previsione combinata: modello meteo ${Math.round((1-fused.wA)*100)} %, Adriac ${Math.round(fused.wA*100)} % (emissioni ${wTxt}).`
+      : `Adriac: emissioni ${wTxt}.`;
   }
   // allerta
   if(alert){
@@ -1279,23 +1372,24 @@ $('astroNext').addEventListener('click', ()=>{ $('astroDate').value=shiftDate($(
 renderAstro();
 
 /* ---------- main ---------- */
-let busy=false, lastLoadAt=0;
+let busy=false, lastLoadAt=0, modelLoaded=false;
 async function load(){
   if(busy) return; busy=true; lastLoadAt=Date.now();
   $('refresh').disabled=true; $('status').textContent='Aggiorno…'; $('error').hidden=true;
   const errs=[];
   const safe = (p,name)=>p.catch(e=>{errs.push(name+': '+(e.message||e)); return null;});
-  const [obs, fc, alert, am, sacca, week, po] = await Promise.all([
+  if(!modelLoaded){ modelLoaded=true; await fetchModel(); }
+  const [obs, fc, alert, am, sacca, week, po, met] = await Promise.all([
     safe(fetchObs(),'osservato'), safe(fetchForecast(),'previsione'), safe(fetchAlert(),'allerta'),
-    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni'), safe(fetchPo(),'Po')
+    safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni'), safe(fetchPo(),'Po'), safe(fetchMet(),'modello meteo')
   ]);
   // Shyfer si scarica solo quando la sua scheda è aperta (vedi toggle); se già scaricato in questa sessione, resta
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week, po};
+  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week, po, met};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
     try{ localStorage.setItem('marea-cache',JSON.stringify({at:Date.now(),data})); }catch(e){}
-    $('status').textContent = `Aggiornato ${fmtT(new Date())}` + (fc?` · previsione Adriac del ${fmtD(fc.emission)}`:'');
+    $('status').textContent = `Aggiornato ${fmtT(new Date())}` + (fc?` · Adriac del ${fmtD(fc.emission)}${met?' + modello meteo':''}`:'');
   }
   try{ render(data); }catch(e){ errs.push('rendering: '+e.message); }
   if(errs.length){ $('error').textContent='Fonti non raggiunte in questo aggiornamento: '+errs.map(e=>e.split(':')[0]).join(', ')+'.'; $('error').hidden=false; }

@@ -13,6 +13,25 @@ Quattro schede scelte dalla barra fissa in basso (onda, pesce, vento, fiume), un
 
 Il grafico si ridisegna quando si torna su Marea (si misura sulla larghezza reale); lo storico del Po si scarica alla prima apertura della scheda Po.
 
+## Previsione combinata (dal 25/11/2026)
+
+La curva prevista, le alte e basse, i massimi 48 h e gli orari di pesca usano una previsione costruita in quattro passi:
+
+1. **Le tre emissioni Adriac pesate**: ognuna riceve un peso inverso al quadrato del suo errore medio sulle ultime 12 ore di misure; dove un'emissione finisce, il salto viene assorbito in 6 ore. Il 25/11/2026 l'emissione delle 00 sbagliava di 40-65 cm su tutta la costa (Porto Garibaldi, Cervia, Cattolica, Venezia) mentre quella del 24 teneva 11 cm.
+2. **Correzione con le letture** sulla media pesata (come prima: errore delle ultime 6 h, decadimento 4 h).
+3. **Modello meteo nostro**: marea astronomica + effetto di pressione e vento (ECMWF via Open-Meteo, tre punti: davanti a Goro 44,79 N 12,40 E, Adriatico centrale 43,5 N 14,5 E, meridionale 41,8 N 16,8 E; pressione media 4 h, gradiente sud-nord 12 h, sforzo del vento su finestre 0-6, 6-12, 12-24, 24-48 h) + scarto residuo proiettato avanti con coefficienti per ogni ora d'anticipo (decadimento e sessa dell'Adriatico, ~22 h). Tarato su 2024-2025 (livelli Arpae orari, meteo ERA5), provato su tutto il 2026 con le previsioni ECMWF reali emesse 1-2 giorni prima: errore medio 3,1 cm a +1 h, 4,2 a +3 h, 5,1 a +6 h, 4,6 a +12 h, 5,2 a +24 h, 6,4 a +48 h (marea astronomica sola 10,6; Adriac grezza ~12-13). Confronto diretto 23-25/11/2026, 48 h: Adriac 12,6 / 12,3 / 40,2 cm, modello 10,3 / 6,7 / 6,0 cm.
+4. **Fusione**: 70 % modello, 30 % Adriac corretta (miglior peso sulle emissioni 23-24/11); Adriac esclusa se la sua media pesata sbaglia più di 20 cm nelle ultime 12 h. Sotto il numero grande compare un avviso se l'ultima emissione è fuori strada (oltre 25 cm) o se modello e Adriac divergono di oltre 25 cm nelle prossime 24 h.
+
+I coefficienti stanno in `data/model.json` (copia di partenza incorporata in `index.html`); l'app li legge prima dal repository GitHub, poi dal sito. La stima "adesso" e lo scostamento meteo usano la media pesata delle emissioni.
+
+## Archivio e ritaratura automatici (GitHub Actions)
+
+`.github/workflows/archivio.yml` gira sui server di GitHub:
+- **ogni giorno alle 11:40 UTC** `scripts/archivio.mjs` salva in `data/adriac/` ogni nuova emissione Adriac (Porto Garibaldi, Cervia, Cattolica, Venezia; ~28 KB) e in `data/meteo/` la previsione ECMWF del giorno sui tre punti (~10 KB): circa 14 MB l'anno;
+- **il 2 di ogni mese** (o a mano da Actions → "Archivio e taratura" → Run workflow) `scripts/calibra.mjs` riscarica livelli dal 2024 e meteo ERA5, ritara coefficienti meteo e di persistenza tenendo fuori gli ultimi 120 giorni come prova, e sostituisce `data/model.json` solo se a +24 h non sbaglia più del modello in uso (tolleranza 0,3 cm). Con almeno 20 emissioni archiviate ritara anche il peso modello/Adriac sugli errori reali. Ogni esecuzione aggiunge una riga a `data/calibrazione.log`.
+
+`pubblica.ps1` prima di caricare scarica i file aggiunti dall'archivio (`git pull --rebase`) e, la prima volta, chiede a gh il permesso `workflow` necessario per caricare i file in `.github/workflows`. GitHub disattiva i lavori pianificati dopo 60 giorni senza attività nel repository: i commit giornalieri dell'archivio la mantengono.
+
 ## Cosa mostra
 
 1. **Grafico marea** (prima schermata): osservato Porto Garibaldi delle ultime 24 h, previsione Adriac per le prossime 48 h, emissione del giorno prima in trasparenza, soglie regionali 0,70 e 0,80 m, linea "adesso", orari delle prossime alte e basse.
