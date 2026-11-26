@@ -1078,7 +1078,18 @@ function render(data){
   else if(badLatest){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`ultima Adriac fuori strada (${Math.round(adr.maeLatest*100)} cm): uso le precedenti e il modello meteo`; }
   else fchip.hidden=true;
 
-  if(last){
+  // sensore fermo: Arpae non pubblica letture da più di 50 minuti (di norma arrivano con ~20 min di ritardo)
+  const stale = last && (now-last.t) > 50*60e3;
+  const agoTxt = mins => mins<60 ? `${mins} min fa` : `${Math.floor(mins/60)} h ${String(mins%60).padStart(2,'0')} min fa`;
+  const fcNow = cf ? interp(cf.series, now) : null;
+  if(last && stale && fcNow!=null){
+    const ago = Math.round((now-last.t)/60e3);
+    const f30 = interp(cf.series, now+30*60e3), dv = f30!=null ? f30-fcNow : null;
+    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
+    $('levelNow').innerHTML = `${m(fcNow)}<small> m <em style="font-style:normal;font-size:.75rem">previsione ${fmtT(new Date(now))}</em></small>`;
+    $('trend').textContent = `${arrow} · ⚠ mareografo fermo: ultima lettura Arpae ${m(last.v)} m alle ${fmtT(new Date(last.t))} (${agoTxt(ago)})`;
+    $('trend').title = 'Arpae non pubblica nuove letture: il numero è la previsione per adesso, non una misura. Torna alla misura appena arrivano letture nuove.';
+  } else if(last){
     const ago = Math.round((now-last.t)/60e3);
     // tendenza: media delle ultime 3 letture contro le 3 di mezz'ora prima (il radar ha rumore di qualche cm)
     const avg = a => a.reduce((s,p)=>s+p.v,0)/a.length;
@@ -1105,7 +1116,7 @@ function render(data){
     const f = interp(adr.series,last.t) ?? interp(fc.prev,last.t);
     if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
       $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`;
-      const chip=$('surgeChip'); const big=Math.abs(s)>=0.08;
+      const chip=$('surgeChip'); const big=Math.abs(s)>=0.08 && !stale; // uno scostamento di ore fa non dice nulla di adesso
       chip.hidden=!big; if(big){ chip.className='chip'+(Math.abs(s)>0.15?' crit':''); chip.textContent=`mare ${Math.round(Math.abs(s)*100)} cm ${s>0?'sopra':'sotto'} la previsione`; } }
     else $('surgeChip').hidden=true;
   }
