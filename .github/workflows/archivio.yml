@@ -5,6 +5,7 @@ name: Archivio e taratura
 on:
   schedule:
     - cron: '40 11 * * *'   # ogni giorno alle 11:40 UTC (l'emissione Adriac delle 00 è pubblicata verso le 10)
+    - cron: '40 17 * * *'   # riserva alle 17:40 UTC: GitHub a volte salta i lavori pianificati; i file già salvati non si riscrivono
     - cron: '20 3 2 * *'    # il 2 di ogni mese: ritaratura del modello
   workflow_dispatch:         # avvio a mano dalla pagina Actions del repository (fa anche la ritaratura)
 
