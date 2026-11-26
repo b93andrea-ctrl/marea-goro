@@ -117,14 +117,31 @@ try {
 } catch (e) { blendNote = 'peso invariato: ' + e.message; }
 console.log(blendNote);
 
-// 4) salvo solo se il nuovo modello non è peggiore del vecchio (tolleranza 0,3 cm a +24 h)
+// 3b) scarto del mareografo di riserva (Cervia) rispetto a Porto Garibaldi, dall'archivio data/mareo (servono 7 giorni)
+let cervia = old.cervia || { offset: 0.01, note: 'confronto iniziale 19-26/11/2026: 311 mezz\'ore, errore medio 4,3 cm' }, cerviaNote = 'scarto Cervia invariato';
+try {
+  const files = (await readdir('data/mareo')).filter(f => f.endsWith('.json')).sort().slice(-90);
+  const d = [];
+  for (const f of files) { const j = JSON.parse(await readFile(`data/mareo/${f}`, 'utf8')); for (const r of j.righe) if (r[1] != null && r[2] != null) d.push(r[1] - r[2]); }
+  if (files.length >= 7 && d.length >= 200) {
+    const s = d.slice().sort((a, b) => a - b), med = s[Math.floor(s.length / 2)];
+    const mae = d.reduce((a, x) => a + Math.abs(x - med), 0) / d.length;
+    cervia = { offset: +med.toFixed(3), mae: +mae.toFixed(3), n: d.length, giorni: files.length, fitted: new Date().toISOString().slice(0, 10) };
+    cerviaNote = `scarto Cervia ${(med * 100).toFixed(1)} cm su ${files.length} giorni (errore medio ${(mae * 100).toFixed(1)} cm)`;
+  } else cerviaNote = `scarto Cervia invariato (archivio di ${files.length} giorni)`;
+} catch (e) { cerviaNote = 'scarto Cervia invariato: ' + e.message; }
+console.log(cerviaNote);
+
+// 4) salvo solo se il nuovo modello non è peggiore del vecchio (tolleranza 0,3 cm a +24 h); lo scarto di Cervia si aggiorna comunque
 const today = new Date().toISOString().slice(0, 10);
 const better = sNew[24] != null && (sOld[24] == null || sNew[24] <= sOld[24] + 0.3);
-const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
+const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${cerviaNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
 await appendFile('data/calibrazione.log', line);
 if (better) {
   const model = { ...old, version: (old.version || 1) + 1, fitted: today, train: `2024-01-01/${new Date(split).toISOString().slice(0, 10)} (meteo ERA5)`, test: `ultimi 120 giorni: MAE ${sNew[1]} cm a +1 h, ${sNew[6]} a +6 h, ${sNew[24]} a +24 h, ${sNew[48]} a +48 h (astronomica sola ${astroOnly})`,
-    C: C.map(v => +v.toFixed(5)), PERS, blend };
+    C: C.map(v => +v.toFixed(5)), PERS, blend, cervia };
   await writeFile('data/model.json', JSON.stringify(model));
+} else {
+  await writeFile('data/model.json', JSON.stringify({ ...old, cervia }));
 }
 console.log(line);

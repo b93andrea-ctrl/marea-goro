@@ -32,3 +32,30 @@ if (!(await exists(mf))) {
   await writeFile(mf, JSON.stringify({ emesso: new Date().toISOString(), punti: arr.map(p => ({ lat: p.latitude, lon: p.longitude, hourly: p.hourly })) }));
   console.log('salvata previsione meteo', oggi);
 }
+
+// 3) mareografi Porto Garibaldi, Cervia e Cattolica ogni 30 minuti (allertameteo tiene solo una settimana):
+//    servono a ritarare lo scarto di Cervia, il mareografo di riserva quando Porto Garibaldi è fermo.
+//    Il parametro time di allertameteo è l'ora italiana scritta come se fosse UTC.
+try {
+  await mkdir('data/mareo', { recursive: true });
+  const IDS = { pg: '14387', cervia: '53155', cattolica: '53156' };
+  const romeWall = t => { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(t)); const g = k => +p.find(x => x.type === k).value; return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')); };
+  const url = t => `https://allertameteo.regione.emilia-romagna.it/o/api/allerta/get-sensor-values-no-time?variabile=${encodeURIComponent('254,0,0/101,-,-,-/B22037')}&time=${romeWall(t)}&o=archivio`;
+  const today0 = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+  for (let back = 6; back >= 1; back--) {
+    const d0 = today0 - back * 86400e3, file = `data/mareo/${new Date(d0).toISOString().slice(0, 10)}.json`;
+    if (await exists(file)) continue;
+    const slots = Array.from({ length: 48 }, (_, i) => d0 + i * 1800e3);
+    const rows = [];
+    for (let i = 0; i < slots.length; i += 8) {
+      const part = await Promise.all(slots.slice(i, i + 8).map(t => get(url(t)).then(j => {
+        const v = id => { const r = (j || []).find(x => x.idstazione === id); return r && r.value != null ? +r.value : null; };
+        return [new Date(t).toISOString(), v(IDS.pg), v(IDS.cervia), v(IDS.cattolica)];
+      }).catch(() => [new Date(t).toISOString(), null, null, null])));
+      rows.push(...part);
+    }
+    if (rows.filter(r => r[2] != null).length < 10) { console.log('mareografi', file, 'senza dati'); continue; }
+    await writeFile(file, JSON.stringify({ colonne: ['ora UTC', 'Porto Garibaldi', 'Cervia', 'Cattolica'], righe: rows }));
+    console.log('salvati mareografi', file);
+  }
+} catch (e) { console.log('mareografi non salvati:', e.message); }

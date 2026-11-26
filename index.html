@@ -17,20 +17,20 @@
    Layout: logo in testa, grafico a tutta larghezza, poi schede in griglia. */
 :root{
   --bg:#ffffff; --card:#ffffff; --fg:#0f2a5a; --muted:#6f7c90; --line:#e9dfc6;
-  --sea:#0f2a5a; --sea-deep:#0f2a5a; --sea-soft:#0f2a5a22; --sand:#c9a24a; --sand-soft:#c9a24a26;
-  --fc:#c9a24a; --fc-old:#c9a24a66; --adr:#d2592e; --adr-old:#6a5fc8; --warn:#d9a21b; --crit:#b53a2f; --ok:#2f7d5a; --now:#0f2a5a;
+  --sea:#0f2a5a; --sea-alt:#3d6bb3; --sea-deep:#0f2a5a; --sea-soft:#0f2a5a22; --sand:#c9a24a; --sand-soft:#c9a24a26;
+  --fc:#c9a24a; --fc-old:#c9a24a66; --warn:#d9a21b; --crit:#b53a2f; --ok:#2f7d5a; --now:#0f2a5a;
   --font:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --display:"Montserrat",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
-    --sea:#8fb4ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
-    --fc:#d8b55e; --fc-old:#d8b55e66; --adr:#f0997b; --adr-old:#afa9ec; --now:#eef1f6; color-scheme:dark; }
+    --sea:#8fb4ff; --sea-alt:#c3d6ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
+    --fc:#d8b55e; --fc-old:#d8b55e66; --now:#eef1f6; color-scheme:dark; }
 }
 :root[data-theme="dark"]{ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66;
-  --sea:#8fb4ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
-  --fc:#d8b55e; --fc-old:#d8b55e66; --adr:#f0997b; --adr-old:#afa9ec; --now:#eef1f6; color-scheme:dark; }
+  --sea:#8fb4ff; --sea-alt:#c3d6ff; --sea-deep:#0b1b36; --sea-soft:#8fb4ff26; --sand:#d8b55e; --sand-soft:#d8b55e22;
+  --fc:#d8b55e; --fc-old:#d8b55e66; --now:#eef1f6; color-scheme:dark; }
 #themeBtn .sun{display:none} #themeBtn .moon{display:block}
 :root[data-theme="dark"] #themeBtn .sun{display:block} :root[data-theme="dark"] #themeBtn .moon{display:none}
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) #themeBtn .sun{display:block} :root:not([data-theme="light"]) #themeBtn .moon{display:none} }
@@ -237,11 +237,12 @@ body{padding-bottom:76px}
   </div>
   <svg class="chart" id="chart" viewBox="0 0 720 300" role="img" aria-label="Livello del mare osservato e previsto"></svg>
   <div class="legend">
-    <span><i style="border-color:var(--sea)"></i>Misurato</span>
+    <span><i style="border-color:var(--sea)"></i>Misurato (PG)</span>
+    <span id="legCV" hidden><i style="border-color:var(--sea-alt)"></i>Misurato (CV)</span>
     <span><i style="border-color:var(--fc);border-top-style:dashed"></i>Previsto</span>
     <span class="x"><i style="border-color:var(--sea);border-top-style:dashed"></i>Stima fino ad adesso</span>
-    <span class="x"><i style="border-color:var(--adr);border-top-width:2px"></i><b id="legAdr" style="font-weight:inherit">Adriac ultima</b></span>
-    <span class="x"><i style="border-color:var(--adr-old);border-top-style:dotted;border-top-width:4px;border-radius:0"></i><b id="legAdrOld" style="font-weight:inherit">Adriac precedente</b></span>
+    <span class="x"><i style="border-color:var(--fc);border-top-style:dotted;opacity:.6"></i>Adriac grezza</span>
+    <span class="x"><i style="border-color:var(--fc-old);border-top-style:dotted"></i>Emissione precedente</span>
     <span class="x"><i style="border-color:var(--muted);border-top-style:dotted"></i>Astronomica</span>
     <span><i style="border-color:var(--warn)"></i>0,70</span>
     <span><i style="border-color:var(--crit)"></i>0,80 m</span>
@@ -493,6 +494,21 @@ async function fetchAllertameteo(){
     slot -= 1800e3;
   }
   return { others:null, meteo:null };
+}
+// Mareografo di riserva: quando Porto Garibaldi non pubblica, Cervia (allertameteo, ogni 30 min) + scarto medio.
+// Confronto 19-26/11/2026, 311 mezz'ore: stessa ora (nessuno sfasamento), PG = Cervia + 1 cm, errore medio 4,3 cm
+// (Cattolica 5,6 cm con 30 min di anticipo). Lo scarto si ritara ogni mese dall'archivio (data/mareo).
+const ST_CERVIA = '53155';
+const cerviaOffset = () => (MODEL.cervia && typeof MODEL.cervia.offset==='number') ? MODEL.cervia.offset : 0.01;
+async function fetchCervia(fromT){
+  const now = Date.now(), H30 = 1800e3;
+  const first = Math.max(Math.ceil((fromT+1)/H30)*H30, Math.floor((now-14*3600e3)/H30)*H30);
+  // allertameteo per un orario non ancora misurato ripete l'ultimo valore: prendo solo mezz'ore di almeno 20 minuti fa
+  const slots = []; for(let t=Math.floor((now-20*60e3)/H30)*H30; t>=first && slots.length<29; t-=H30) slots.push(t);
+  const res = await Promise.all(slots.map(t=>getJSON(amSensor('254,0,0/101,-,-,-/B22037', t), 10000)
+    .then(j=>{ const r=(j||[]).find(x=>x.idstazione===ST_CERVIA && x.value!=null); return r? {t, v:+r.value+cerviaOffset(), sub:true} : null; })
+    .catch(()=>null)));
+  return res.filter(Boolean).sort((a,b)=>a.t-b.t);
 }
 /* ---------- Po: livelli lungo l'asta e stima dell'arrivo delle acque ----------
    Livelli dagli idrometri (allertameteo, stesso servizio dei mareografi): adesso e 24 h fa, da Piacenza al Po di Goro,
@@ -866,7 +882,9 @@ function ourForecast(obs, met, now){
 function blendAdriac(obs, fc, now){
   const ems=(fc.emissions||[]).filter(e=>e.series.length);
   if(ems.length<2) return { series: fc.latest, maeLatest:null, mae:null, weights:null, ems };
-  const win=obs.filter(p=>p.t>=now-12*3600e3);
+  // le 12 ore che precedono l'ultima lettura (se il mareografo è fermo, le ultime ore senza misure non dicono nulla)
+  const ref = obs.length ? Math.min(now, obs[obs.length-1].t) : now;
+  const win=obs.filter(p=>p.t>=ref-12*3600e3);
   const stat=ems.map(e=>{ let s=0,n=0; for(const p of win){ const v=interp(e.series,p.t); if(v!=null){ s+=Math.abs(p.v-v); n++; } } return n>=6? s/n : null; });
   const w=stat.map(x=> x==null? 0 : 1/(x*x+0.0009));
   // media pesata delle emissioni disponibili a ogni istante; quando una finisce, la media si ricalcola sulle restanti
@@ -886,9 +904,11 @@ function blendAdriac(obs, fc, now){
 }
 /* ---------- fusione: nostro modello e Adriac corretta, con avviso quando divergono ---------- */
 function fuseForecast(ours, adr, cf, now){
-  const wA = (!cf || (adr.mae!=null && adr.mae>0.2)) ? 0 : 1-MODEL.blend;
+  // senza letture recenti la correzione non c'è: si usa la media pesata delle emissioni così com'è
+  const aS = cf ? cf.series : adr.series;
+  const wA = (!aS || !aS.length || (adr.mae!=null && adr.mae>0.2)) ? 0 : 1-MODEL.blend;
   if(!ours) return cf ? { series: cf.series, wA:1, dmax:0, src:'adriac' } : null;
-  let dmax=0; const series=ours.series.map(p=>{ const a=cf? interp(cf.series,p.t) : null; if(a!=null && p.t<=now+24*3600e3) dmax=Math.max(dmax, Math.abs(a-p.v)); return {t:p.t, v: a==null? p.v : (1-wA)*p.v + wA*a}; });
+  let dmax=0; const series=ours.series.map(p=>{ const a=aS? interp(aS,p.t) : null; if(a!=null && p.t<=now+24*3600e3) dmax=Math.max(dmax, Math.abs(a-p.v)); return {t:p.t, v: a==null? p.v : (1-wA)*p.v + wA*a}; });
   return { series, wA, dmax, src:'fusa' };
 }
 
@@ -925,7 +945,7 @@ function extrema(series, fromT, win=3, MIN_AMP=0.08){
 }
 
 /* ---------- chart ---------- */
-function drawChart(obs, fc, fcPrev, ext, nc, cf){
+function drawChart(obs, fc, fcPrev, ext, nc, cf, subFrom=null){
   const svg = $('chart');
   const W = Math.max(320, Math.round(svg.getBoundingClientRect().width||720)), narrow = W<520;
   const simple = narrow && !chartDetails;   // telefono: solo misurato + previsione corretta, finestra corta
@@ -964,25 +984,30 @@ function drawChart(obs, fc, fcPrev, ext, nc, cf){
   // serie
   if(!simple){
     g+=`<path d="${path(astroSeries(t0,t1,20))}" fill="none" stroke="var(--muted)" stroke-width="1.3" stroke-dasharray="1 3" opacity=".9"/>`;
-    if(fcPrev.length) g+=`<path d="${path(fcPrev)}" fill="none" stroke="var(--adr-old)" stroke-width="2.4" stroke-dasharray="0.1 4.5" stroke-linecap="round"/>`;
+    if(fcPrev.length) g+=`<path d="${path(fcPrev)}" fill="none" stroke="var(--fc-old)" stroke-width="1.5" stroke-dasharray="2 3"/>`;
   }
   if(fc.length){
     const fcFut = fc.filter(p=>p.t>=now-20*60e3);
     if(cf && cf.series.length>2){
-      if(!simple) g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--adr)" stroke-width="1.4" opacity=".85"/>`;
+      if(!simple) g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="2 3" opacity=".55"/>`;
       g+=`<path d="${path(cf.series)}" fill="none" stroke="var(--fc)" stroke-width="${simple?2.6:2.2}" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
     } else {
       g+=`<path d="${path(fcFut)}" fill="none" stroke="var(--fc)" stroke-width="${simple?2.6:2.2}" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
     }
     const fcPast = fc.filter(p=>p.t<=now);
-    if(!simple && fcPast.length>1) g+=`<path d="${path(fcPast)}" fill="none" stroke="var(--adr)" stroke-width="1.4" opacity=".85"/>`;
+    if(!simple && fcPast.length>1) g+=`<path d="${path(fcPast)}" fill="none" stroke="var(--fc)" stroke-width="1.2" stroke-dasharray="3 3" opacity=".6"/>`;
   }
   if(obs.length){
     const area = path(obs)+` L${x(Math.min(obs[obs.length-1].t,t1)).toFixed(1)} ${y(yMin)} L${x(Math.max(obs[0].t,t0)).toFixed(1)} ${y(yMin)} Z`;
     g=`<defs><linearGradient id="seaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sea)" stop-opacity=".35"/><stop offset="1" stop-color="var(--sea)" stop-opacity=".04"/></linearGradient></defs>`+g;
     g+=`<path d="${area}" fill="url(#seaFill)"/>`;
-    g+=`<path d="${path(obs)}" fill="none" stroke="var(--sea)" stroke-width="2.4" stroke-linejoin="round"/>`;
-    const last=obs[obs.length-1]; g+=`<circle cx="${x(last.t)}" cy="${y(last.v)}" r="3.5" fill="var(--sea)" stroke="var(--card)" stroke-width="1.5"/>`;
+    if(subFrom!=null){ // Porto Garibaldi fermo: il tratto di Cervia è appena più chiaro, un punto segna il cambio di mareografo
+      const real = obs.filter(p=>p.t<=subFrom), alt = obs.filter(p=>p.t>=subFrom);
+      g+=`<path d="${path(real)}" fill="none" stroke="var(--sea)" stroke-width="2.4" stroke-linejoin="round"/>`;
+      g+=`<path d="${path(alt)}" fill="none" stroke="var(--sea-alt)" stroke-width="2.4" stroke-linejoin="round"/>`;
+      const sw = real[real.length-1]; if(sw && sw.t>=t0) g+=`<circle cx="${x(sw.t).toFixed(1)}" cy="${y(sw.v).toFixed(1)}" r="3.2" fill="var(--card)" stroke="var(--sea)" stroke-width="1.6"/>`;
+    } else g+=`<path d="${path(obs)}" fill="none" stroke="var(--sea)" stroke-width="2.4" stroke-linejoin="round"/>`;
+    const last=obs[obs.length-1]; if(subFrom==null) g+=`<circle cx="${x(last.t)}" cy="${y(last.v)}" r="3.5" fill="var(--sea)" stroke="var(--card)" stroke-width="1.5"/>`;
   }
   if(nc){ // stima dall'ultima lettura ad adesso: solo il tratteggio, il valore è nel numero grande
     g+=`<path d="${path(nc.series)}" fill="none" stroke="var(--sea)" stroke-width="2.2" stroke-dasharray="3 3" stroke-linecap="round"/>`;
@@ -1056,21 +1081,24 @@ function render(data){
   const {obs, fc, alert, others, sacca, meteo, shyfer, week, po, met} = data;
   const now = Date.now();
   const last = obs.length?obs[obs.length-1]:null;
+  // Porto Garibaldi fermo: le letture di Cervia (+ scarto) prendono il suo posto nei calcoli dopo l'ultima lettura vera
+  const sub = (data.sub||[]).filter(p=>!last || p.t>last.t);
+  const subLast = sub.length ? sub[sub.length-1] : null;
+  const subLive = !!subLast && now-subLast.t < 75*60e3;
+  const obsM = sub.length ? obs.concat(sub) : obs;
   // 1) le tre emissioni Adriac pesate sugli errori delle ultime 12 h; 2) correzione con le letture; 3) nostro modello meteo; 4) fusione
-  const adr = blendAdriac(obs, fc, now);
+  const adr = blendAdriac(obsM, fc, now);
   const fcB = { latest: adr.series, prev: fc.prev };
-  const nc = nowcast(obs, adr.series, now);
-  const cfA = correctedForecast(obs, fcB, now, nc);
-  let ours=null; try{ ours = ourForecast(obs, met, now); }catch(e){ ours=null; }
+  const nc = nowcast(obsM, adr.series, now);
+  const cfA = correctedForecast(obsM, fcB, now, nc);
+  let ours=null; try{ ours = ourForecast(obsM, met, now); }catch(e){ ours=null; }
   const fused = fuseForecast(ours, adr, cfA, now);
   const cf = fused ? { series: fused.series, offW: cfA?cfA.offW:0 } : cfA;
   // per alte/basse future uso la previsione combinata, unita al tratto passato di Adriac per gli estremi vicini ad adesso
   const fcUse = cf ? adr.series.filter(p=>p.t<=now).concat(cf.series.filter(p=>p.t>now)) : adr.series;
   const ext = extrema(fcUse, now-3600e3);
-  drawChart(obs, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf);
-  { const em = fc.emissions||[]; const n = em.length;
-    $('legAdr').textContent = n ? `Adriac ${fmtD(new Date(em[n-1].t0))} (grezza)` : 'Adriac ultima (grezza)';
-    $('legAdrOld').textContent = n>1 ? `Adriac ${fmtD(new Date(em[n-2].t0))}` : 'Adriac precedente'; }
+  drawChart(obsM, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf, (sub.length && last) ? last.t : null); // Cervia: stesso misurato, blu appena più chiaro
+  $('legCV').hidden = !sub.length;
   // avviso di affidabilità: ultima emissione scartata, o nostro modello e Adriac in disaccordo
   const fchip=$('fcChip');
   const badLatest = adr.maeLatest!=null && adr.maeLatest>0.25;
@@ -1082,7 +1110,16 @@ function render(data){
   const stale = last && (now-last.t) > 50*60e3;
   const agoTxt = mins => mins<60 ? `${mins} min fa` : `${Math.floor(mins/60)} h ${String(mins%60).padStart(2,'0')} min fa`;
   const fcNow = cf ? interp(cf.series, now) : null;
-  if(last && stale && fcNow!=null){
+  if(last && stale && subLive && nc){
+    const ago = Math.round((now-last.t)/60e3);
+    const prevS = sub.filter(p=>p.t<=subLast.t-30*60e3).pop();
+    const dv = prevS ? subLast.v-prevS.v : null;
+    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
+    const off = Math.round(cerviaOffset()*100);
+    $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">stima da Cervia ${fmtT(new Date(now))}</em></small>`;
+    $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · ⚠ Porto Garibaldi fermo dalle ${fmtT(new Date(last.t))} (${agoTxt(ago)}): uso Cervia ${off>=0?'+':'−'}${Math.abs(off)} cm, lettura delle ${fmtT(new Date(subLast.t))}`;
+    $('trend').title = `Il mareografo di Porto Garibaldi non pubblica. Al suo posto si usa quello di Cervia, che ha la stessa ora di marea ed è in media ${Math.abs(off)} cm più ${off>=0?'basso':'alto'} (errore medio circa 4 cm). Torna a Porto Garibaldi appena riparte.`;
+  } else if(last && stale && fcNow!=null){
     const ago = Math.round((now-last.t)/60e3);
     const f30 = interp(cf.series, now+30*60e3), dv = f30!=null ? f30-fcNow : null;
     const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
@@ -1113,10 +1150,11 @@ function render(data){
 
   // scostamento
   if(last){
-    const f = interp(adr.series,last.t) ?? interp(fc.prev,last.t);
-    if(f!=null){ const s=last.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
+    const lastS = (stale && subLive) ? subLast : last; // con Porto Garibaldi fermo, lo scostamento si legge su Cervia
+    const f = interp(adr.series,lastS.t) ?? interp(fc.prev,lastS.t);
+    if(f!=null){ const s=lastS.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
       $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`;
-      const chip=$('surgeChip'); const big=Math.abs(s)>=0.08 && !stale; // uno scostamento di ore fa non dice nulla di adesso
+      const chip=$('surgeChip'); const big=Math.abs(s)>=0.08 && (!stale || subLive); // uno scostamento di ore fa non dice nulla di adesso
       chip.hidden=!big; if(big){ chip.className='chip'+(Math.abs(s)>0.15?' crit':''); chip.textContent=`mare ${Math.round(Math.abs(s)*100)} cm ${s>0?'sopra':'sotto'} la previsione`; } }
     else $('surgeChip').hidden=true;
   }
@@ -1398,7 +1436,11 @@ async function load(){
     safe(fetchAllertameteo(),'mareografi e meteo'), safe(fetchSacca(),'Sacca'), safe(fetchWeek(),'meteo 7 giorni'), safe(fetchPo(),'Po'), safe(fetchMet(),'modello meteo')
   ]);
   // Shyfer si scarica solo quando la sua scheda è aperta (vedi toggle); se già scaricato in questa sessione, resta
-  let data = {obs:obs||[], fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week, po, met};
+  // Porto Garibaldi fermo da più di 50 minuti: riempio il buco con Cervia
+  let sub = [];
+  const lastPG = obs && obs.length ? obs[obs.length-1].t : null;
+  if(lastPG && Date.now()-lastPG > 50*60e3) sub = (await safe(fetchCervia(lastPG),'Cervia')) || [];
+  let data = {obs:obs||[], sub, fc:fc||{latest:[],prev:[],emission:new Date()}, alert, others: am?am.others:null, sacca, meteo: am?am.meteo:null, shyfer: shyState.data, week, po, met};
   if(!obs&&!fc){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
