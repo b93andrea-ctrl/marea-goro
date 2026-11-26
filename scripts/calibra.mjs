@@ -132,16 +132,32 @@ try {
 } catch (e) { cerviaNote = 'scarto Cervia invariato: ' + e.message; }
 console.log(cerviaNote);
 
+// 3c) ritardo della Sacca (porto di Goro) rispetto al mare, da salita e discesa, dalle corse Shyfer archiviate
+//     (prime 24 ore di ogni corsa, così ogni giorno conta una volta); servono almeno 10 corse
+let sacca = old.sacca || { up: 5, down: 35, note: 'corsa Shyfer del 26/11/2026' }, saccaNote = 'ritardi Sacca invariati';
+try {
+  const { ritardi } = await import('./shyfer.mjs');
+  const files = (await readdir('data/shyfer')).filter(f => f.endsWith('.json')).sort().slice(-120);
+  const corse = []; for (const f of files) corse.push(JSON.parse(await readFile(`data/shyfer/${f}`, 'utf8')));
+  const r = ritardi(corse, 'Goro', 24);
+  if (corse.length >= 10 && r.nUp >= 30 && r.nDown >= 30) {
+    const clamp = v => Math.max(0, Math.min(120, Math.round(v)));
+    sacca = { up: clamp(r.up), down: clamp(r.down), nUp: r.nUp, nDown: r.nDown, corse: corse.length, fitted: new Date().toISOString().slice(0, 10) };
+    saccaNote = `ritardi Sacca +${sacca.up} min in salita, +${sacca.down} in discesa (${corse.length} corse Shyfer)`;
+  } else saccaNote = `ritardi Sacca invariati (archivio di ${corse.length} corse Shyfer)`;
+} catch (e) { saccaNote = 'ritardi Sacca invariati: ' + e.message; }
+console.log(saccaNote);
+
 // 4) salvo solo se il nuovo modello non è peggiore del vecchio (tolleranza 0,3 cm a +24 h); lo scarto di Cervia si aggiorna comunque
 const today = new Date().toISOString().slice(0, 10);
 const better = sNew[24] != null && (sOld[24] == null || sNew[24] <= sOld[24] + 0.3);
-const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${cerviaNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
+const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${cerviaNote} · ${saccaNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
 await appendFile('data/calibrazione.log', line);
 if (better) {
   const model = { ...old, version: (old.version || 1) + 1, fitted: today, train: `2024-01-01/${new Date(split).toISOString().slice(0, 10)} (meteo ERA5)`, test: `ultimi 120 giorni: MAE ${sNew[1]} cm a +1 h, ${sNew[6]} a +6 h, ${sNew[24]} a +24 h, ${sNew[48]} a +48 h (astronomica sola ${astroOnly})`,
-    C: C.map(v => +v.toFixed(5)), PERS, blend, cervia };
+    C: C.map(v => +v.toFixed(5)), PERS, blend, cervia, sacca };
   await writeFile('data/model.json', JSON.stringify(model));
 } else {
-  await writeFile('data/model.json', JSON.stringify({ ...old, cervia }));
+  await writeFile('data/model.json', JSON.stringify({ ...old, cervia, sacca }));
 }
 console.log(line);

@@ -284,7 +284,7 @@ body{padding-bottom:76px}
     <div class="d pv" id="fishSummary">calcolo in corso…</div>
     <div class="fishctl">
       <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
-      <span class="d">dentro la Sacca (Porto Garibaldi +45 min), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
+      <span class="d">dentro la Sacca (Porto Garibaldi <span class="lagTxt">+5 min se sale, +35 se scende</span>), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
     </div>
     <div id="fish"></div>
     <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
@@ -1099,6 +1099,7 @@ function render(data){
   const ext = extrema(fcUse, now-3600e3);
   drawChart(obsM, fc.latest, fc.prev, ext.filter(e=>e.t>now), nc, cf, (sub.length && last) ? last.t : null); // Cervia: stesso misurato, blu appena più chiaro
   $('legCV').hidden = !sub.length;
+  document.querySelectorAll('.lagTxt').forEach(e=>e.textContent=lagTxt()); // ritardi della Sacca (ritarati ogni mese)
   // avviso di affidabilità: ultima emissione scartata, o nostro modello e Adriac in disaccordo
   const fchip=$('fcChip');
   const badLatest = adr.maeLatest!=null && adr.maeLatest>0.25;
@@ -1235,9 +1236,20 @@ function render(data){
    Shyfer (SHYFEM, CNR-ISMAR, fatto girare da Arpae) dà il livello dentro la Sacca a colori con scatti di 0,2 m,
    partendo dalla previsione Adriac al bordo (senza le nostre correzioni). Dalle 72 mappe del 18/11/2026 il punto di
    Goro segue il mare aperto con un ritardo fino a un'ora e nessuno smorzamento visibile a questa risoluzione.
-   Stima ibrida: la nostra curva di Porto Garibaldi (misurato + previsione corretta) spostata avanti di GORO_LAG;
-   accanto, il livello Shyfer letto dai pixel della mappa nei tre punti, per confronto. */
-const GORO_LAG = 45*60e3;
+   Stima ibrida: la nostra curva di Porto Garibaldi (misurato + previsione corretta) spostata avanti di un ritardo
+   diverso quando l'acqua sale e quando scende; accanto, il livello Shyfer letto dai pixel della mappa, per confronto.
+   Ritardi dalla corsa Shyfer del 26/11/2026 (passaggi di fascia, porto di Goro contro mare aperto, ~14 per verso):
+   +5 min in salita, +35 min in discesa (la Sacca si svuota più lentamente di come si riempie). Si ritarano ogni mese
+   dall'archivio delle corse Shyfer (data/shyfer) e arrivano in MODEL.sacca. */
+const saccaLag = () => { const s = MODEL.sacca||{}; return { up: (typeof s.up==='number'?s.up:5)*60e3, down: (typeof s.down==='number'?s.down:35)*60e3 }; };
+const lagTxt = () => { const L=saccaLag(); return `+${Math.round(L.up/60e3)} min se sale, +${Math.round(L.down/60e3)} se scende`; };
+function goroLagAt(t){ // ritardo che sfuma tra i due valori secondo la pendenza della curva (niente salti vicino ad alte e basse)
+  const L = saccaLag(), mid = (L.up+L.down)/2, half = (L.down-L.up)/2;
+  const a = levelAt(t-mid-15*60e3), b = levelAt(t-mid+15*60e3);
+  if(!a || !b) return mid;
+  const slope = (b.v-a.v)/0.5;                       // m/h
+  return mid + half*Math.tanh(-slope/0.04);          // scende → ritardo lungo, sale → corto
+}
 const SHY_PTS = [ {k:'Goro', x:660, y:350}, {k:'Gorino', x:1110, y:640}, {k:'Bocca', x:1050, y:1150} ]; // pixel sulla mappa 2100×1644
 let shyState = { data:null, ext:[], idx:null, loading:null };
 function shyBin(data, px, py, imgData, W){
@@ -1257,7 +1269,7 @@ function shyBin(data, px, py, imgData, W){
 }
 function goroEstimate(t){ // nostra curva di Porto Garibaldi spostata del ritardo
   if(!chartGeom) return null;
-  const r = levelAt(t-GORO_LAG); return r;
+  const r = levelAt(t-goroLagAt(t)); return r;
 }
 function renderShyfer(){
   const d = shyState.data, now = Date.now();
@@ -1280,7 +1292,7 @@ function showShyMap(i){
   const mp = d.maps[i]; $('shySlider').value = i;
   $('shyWhen').textContent = `${fmtD(new Date(mp.t))} ore ${fmtT(new Date(mp.t))}`;
   const g = goroEstimate(mp.t);
-  const rowEst = g ? `<tr><td><b>Goro · stima</b> (nostra curva +45 min)</td><td>${m(g.v)}<span class="u">m</span></td></tr>` : '';
+  const rowEst = g ? `<tr><td><b>Goro · stima</b> (nostra curva ${lagTxt()})</td><td>${m(g.v)}<span class="u">m</span></td></tr>` : '';
   $('shyTable').innerHTML = `<tr><th>Punto</th><th>Livello</th></tr>${rowEst}<tr><td colspan="2" class="d">lettura mappa in corso…</td></tr>`;
   if(!$('shyBox').open){ shyState.loading=null; return; } // la mappa si scarica solo a scheda aperta
   const img = $('shyImg'); img.src = mp.url;
@@ -1300,7 +1312,7 @@ function showShyMap(i){
         const f1 = v => (v>=0?'+':'−')+Math.abs(v).toFixed(1).replace('.',',');
         rows += `<tr><td>${p.k} · Shyfer</td><td>${bin?`${f1(bin.lo)}…${f1(bin.hi)}<span class="u">m</span>`:'–'}</td></tr>`;
       }
-      let note = 'Shyfer: scatti di 0,2 m, senza le nostre correzioni. Stima: Porto Garibaldi corretto, +45 min.';
+      let note = 'Shyfer: scatti di 0,2 m, senza le nostre correzioni. Stima: Porto Garibaldi corretto, '+lagTxt()+'.';
       if(g && goroBin){ const inside = g.v>=goroBin.lo-0.05 && g.v<=goroBin.hi+0.05; note = (inside?'Le due fonti concordano. ':'Le due fonti divergono: pesa di più la stima. ') + note; }
       $('shyNote').textContent = note;
     }catch(e){ rows = `<tr><td colspan="2" class="d">Mappa non leggibile (${e.message}).</td></tr>`; }
@@ -1343,7 +1355,7 @@ function renderFish(){
   const wk = fishState.week;
   if(!wk || !chartGeom){ el.innerHTML = '<div class="none">Previsione meteo non disponibile al momento.</div>'; $('fishSummary').textContent='previsione non disponibile'; return; }
   const now = Date.now(), lo = fishState.lo/100, hi = fishState.hi/100;
-  const lvl = t => { const r = goroEstimate(t); return r ? r.v : null; }; // livello dentro la Sacca: Porto Garibaldi spostato di 45 min
+  const lvl = t => { const r = goroEstimate(t); return r ? r.v : null; }; // livello dentro la Sacca: Porto Garibaldi in ritardo (breve se sale, lungo se scende)
   const wAt = t => { const h = wk.hours; if(!h.length || t<h[0].t || t>h[h.length-1].t) return null; const i = Math.min(h.length-2, Math.max(0, Math.floor((t-h[0].t)/3600e3))); return h[i]; };
   const dirName = a => ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
   const fmtDay = new Intl.DateTimeFormat('it-IT',{weekday:'long',day:'numeric',month:'short',timeZone:TZ});

@@ -59,3 +59,21 @@ try {
     console.log('salvati mareografi', file);
   }
 } catch (e) { console.log('mareografi non salvati:', e.message); }
+
+// 4) livelli Shyfer nella Sacca (mare aperto, Bocca, Gorino, porto di Goro), ora per ora, dell'ultima corsa:
+//    Arpae tiene solo l'ultima. Servono a ritarare il ritardo della Sacca quando l'acqua sale e quando scende.
+try {
+  await mkdir('data/shyfer', { recursive: true });
+  const { inflateSync } = await import('node:zlib');
+  const { leggiCorsa } = await import('./shyfer.mjs');
+  const sj = await get('https://apps.arpae.it/REST/meteo_mappe_mare_previsione_livello_mare_sacca_shyfer?sort=-_id&max_results=1');
+  const rec = sj._items[0];
+  const first = rec.mappe.map(m => m.data_validita).sort()[0];
+  const file = `data/shyfer/${first.slice(0, 10)}.json`;
+  if (!(await exists(file))) {
+    const getBytes = async f => { const r = await fetch('https://apps.arpae.it/REST' + f); if (!r.ok) throw new Error(r.status + ' ' + f); return new Uint8Array(await r.arrayBuffer()); };
+    const out = await leggiCorsa(rec, getBytes, z => inflateSync(z));
+    await writeFile(file, JSON.stringify({ corsa: rec._created, ...out }));
+    console.log('salvata corsa Shyfer', file);
+  }
+} catch (e) { console.log('Shyfer non salvato:', e.message); }
