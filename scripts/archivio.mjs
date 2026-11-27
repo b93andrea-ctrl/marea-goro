@@ -77,3 +77,15 @@ try {
     console.log('salvata corsa Shyfer', file);
   }
 } catch (e) { console.log('Shyfer non salvato:', e.message); }
+
+// 5) la previsione dell'app in questo momento (combinata, nostro modello, Adriac corretta), per misurarne l'errore
+try {
+  const { readFile } = await import('node:fs/promises');
+  const { calcolaPrevisione } = await import('./previsione.mjs');
+  await mkdir('data/previsioni', { recursive: true });
+  const src = await readFile('index.html', 'utf8');
+  const model = JSON.parse(await readFile('data/model.json', 'utf8'));
+  const prev = await calcolaPrevisione({ src, model, get });
+  const file = `data/previsioni/${prev.emessa.slice(0, 13).replace(':', '')}.json`;
+  if (!(await exists(file))) { await writeFile(file, JSON.stringify(prev)); console.log('salvata previsione dell\'app', file, '· peso Adriac', prev.peso_adriac); }
+} catch (e) { console.log('previsione non salvata:', e.message); }

@@ -117,6 +117,36 @@ try {
 } catch (e) { blendNote = 'peso invariato: ' + e.message; }
 console.log(blendNote);
 
+// 3a) errore reale delle previsioni dell'app archiviate (data/previsioni) contro i livelli misurati;
+//     con almeno 20 previsioni verificate fino a +48 h il peso modello/Adriac si ritara su queste (sono le previsioni vere)
+let provaNote = 'previsioni dell\'app: archivio vuoto';
+try {
+  const files = (await readdir('data/previsioni')).filter(f => f.endsWith('.json')).sort().slice(-180);
+  const LEADS = [1, 3, 6, 12, 24, 48], acc = { fusa: {}, nostro: {}, adriac: {} };
+  for (const k in acc) for (const L of LEADS) acc[k][L] = { s: 0, n: 0 };
+  const ws = []; for (let w = 0; w <= 10; w++) ws.push({ s: 0, n: 0 });
+  let complete = 0;
+  for (const f of files) {
+    const p = JSON.parse(await readFile(`data/previsioni/${f}`, 'utf8'));
+    const T = Date.parse(p.emessa); let has48 = false;
+    p.ore.forEach((ts, i) => {
+      const t = Date.parse(ts), o = OBS.get(t); if (o == null) return;
+      const L = Math.round((t - T) / H);
+      if (L >= 48) has48 = true;
+      for (const k in acc) if (acc[k][L] && p[k][i] != null) { acc[k][L].s += Math.abs(o - p[k][i]); acc[k][L].n++; }
+      if (L >= 1 && L <= 48 && p.nostro[i] != null && p.adriac[i] != null) for (let w = 0; w <= 10; w++) { ws[w].s += Math.abs(o - (w / 10 * p.nostro[i] + (1 - w / 10) * p.adriac[i])); ws[w].n++; }
+    });
+    if (has48) complete++;
+  }
+  const fmt = k => LEADS.map(L => acc[k][L].n ? `+${L}h ${(acc[k][L].s / acc[k][L].n * 100).toFixed(1)}` : null).filter(Boolean).join(' ');
+  provaNote = files.length ? `previsioni dell'app (${files.length}, ${complete} verificate a +48 h) · combinata ${fmt('fusa')} · nostro ${fmt('nostro')} · Adriac corretta ${fmt('adriac')} cm` : provaNote;
+  if (complete >= 20) {
+    let best = 7; for (let w = 0; w <= 10; w++) if (ws[w].n && ws[w].s / ws[w].n < ws[best].s / ws[best].n) best = w;
+    blend = best / 10; blendNote = `peso modello ${blend} dalle previsioni archiviate (errore ${(ws[best].s / ws[best].n * 100).toFixed(1)} cm, solo Adriac ${(ws[0].s / ws[0].n * 100).toFixed(1)}, solo nostro ${(ws[10].s / ws[10].n * 100).toFixed(1)})`;
+  }
+} catch (e) { provaNote = 'previsioni dell\'app non valutate: ' + e.message; }
+console.log(provaNote);
+
 // 3b) scarto del mareografo di riserva (Cervia) rispetto a Porto Garibaldi, dall'archivio data/mareo (servono 7 giorni)
 let cervia = old.cervia || { offset: 0.01, note: 'confronto iniziale 19-26/11/2026: 311 mezz\'ore, errore medio 4,3 cm' }, cerviaNote = 'scarto Cervia invariato';
 try {
@@ -151,7 +181,7 @@ console.log(saccaNote);
 // 4) salvo solo se il nuovo modello non è peggiore del vecchio (tolleranza 0,3 cm a +24 h); lo scarto di Cervia si aggiorna comunque
 const today = new Date().toISOString().slice(0, 10);
 const better = sNew[24] != null && (sOld[24] == null || sNew[24] <= sOld[24] + 0.3);
-const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${cerviaNote} · ${saccaNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
+const line = `${today} · nuovo +1h ${sNew[1]} +6h ${sNew[6]} +24h ${sNew[24]} +48h ${sNew[48]} cm · vecchio +24h ${sOld[24]} cm · astronomica ${astroOnly} cm · ${blendNote} · ${provaNote} · ${cerviaNote} · ${saccaNote} · ${better ? 'AGGIORNATO' : 'tenuto il vecchio'}\n`;
 await appendFile('data/calibrazione.log', line);
 if (better) {
   const model = { ...old, version: (old.version || 1) + 1, fitted: today, train: `2024-01-01/${new Date(split).toISOString().slice(0, 10)} (meteo ERA5)`, test: `ultimi 120 giorni: MAE ${sNew[1]} cm a +1 h, ${sNew[6]} a +6 h, ${sNew[24]} a +24 h, ${sNew[48]} a +48 h (astronomica sola ${astroOnly})`,
