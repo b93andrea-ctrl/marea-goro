@@ -36,6 +36,10 @@ I coefficienti stanno in `data/model.json` (copia di partenza incorporata in `in
 
 `pubblica.ps1` prima di caricare scarica i file aggiunti dall'archivio (`git pull --rebase`) e, la prima volta, chiede a gh il permesso `workflow` necessario per caricare i file in `.github/workflows`. GitHub disattiva i lavori pianificati dopo 60 giorni senza attività nel repository: i commit giornalieri dell'archivio la mantengono.
 
+## Mappa fondali (dal 28/11/2026)
+
+`fondali.html`, aperta dalla scheda **Pesca** ("Mappa fondali · Apri"): acqua nei recinti ora per ora, da −24 h a +24 h (letture Arpae + ultima previsione archiviata in `data/previsioni`, raccordata, +20 min di ritardo della Sacca). Tocca un punto: acqua adesso/all'ora scelta e alle prossime 3 basse. Dati: `data/fondali.json` (fondale in cm sullo zero del mareografo, griglia 5 m UTM 33, ritagliata sui recinti: rilievo Regione Emilia-Romagna 2012 CC BY 4.0, aggiornato con Sentinel-2 2024–2026) e `data/recinti.json` (contorni dei recinti). Entrambi si rigenerano dagli strumenti in `test-batimetria/` (editor dei recinti e calcolo del fondale), fuori dall'app.
+
 ## Cosa mostra
 
 1. **Grafico marea** (prima schermata): osservato Porto Garibaldi delle ultime 24 h, previsione Adriac per le prossime 48 h, emissione del giorno prima in trasparenza, soglie regionali 0,70 e 0,80 m, linea "adesso", orari delle prossime alte e basse.

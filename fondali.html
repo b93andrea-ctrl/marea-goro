@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="icon-192.png" type="image/png">
+<title>Mappa fondali · Marea Goro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* Stesso stile dell'app Marea Goro: bianco / blu notte, navy e oro, Montserrat leggero, schede con bordo sottile. */
+:root{ --bg:#ffffff; --card:#ffffff; --fg:#0f2a5a; --muted:#6f7c90; --line:#e9dfc6; --sea:#0f2a5a; --sand:#c9a24a;
+  --font:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color-scheme:light; }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66; --sea:#8fb4ff; --sand:#d8b55e; color-scheme:dark; } }
+:root[data-theme="dark"]{ --bg:#0b1b36; --card:#10244a; --fg:#eef1f6; --muted:#9aa8c0; --line:#2b3f66; --sea:#8fb4ff; --sand:#d8b55e; color-scheme:dark; }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-variant-numeric:tabular-nums}
+body{padding:0 max(12px,env(safe-area-inset-right,0px)) 28px max(12px,env(safe-area-inset-left,0px));max-width:760px;margin:0 auto}
+header{padding:calc(10px + env(safe-area-inset-top,0px)) 2px 10px;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.back{width:38px;height:38px;border-radius:999px;border:1px solid var(--sand);background:var(--card);color:var(--fg);display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.3rem;line-height:1}
+h1{font-size:1.1rem;margin:0;font-weight:300;letter-spacing:2.2px;text-transform:uppercase;line-height:1}
+h1 span{color:var(--sand)}
+.sub{font-size:.72rem;color:var(--muted);margin-top:5px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.card h2{font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--sand);margin:0 0 8px;font-weight:500;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.quando{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.quando .t{font-size:1.5rem;font-weight:300;letter-spacing:-.3px}
+.quando .m{font-size:.9rem;color:var(--muted)}
+.quando .m b{color:var(--fg);font-weight:600}
+svg.spark{width:100%;height:56px;display:block;margin:6px 0 2px}
+.ctl{display:flex;align-items:center;gap:8px}
+.ctl input{flex:1;min-width:0;accent-color:var(--sea);height:28px}
+.ctl button{font:inherit;font-weight:500;border:1px solid var(--sand);background:var(--card);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.85rem}
+.ctl button.s{padding:6px 10px;font-size:1rem;line-height:1}
+.scala{display:flex;justify-content:space-between;font-size:.66rem;color:var(--muted);margin-top:2px}
+#map{height:360px;border-radius:14px;border:1px solid var(--line);margin-bottom:10px;background:var(--card);z-index:0}
+.leg{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:.7rem;color:var(--muted);margin:-2px 2px 10px}
+.leg span{display:inline-flex;align-items:center;gap:4px}
+.leg i{width:12px;height:10px;border-radius:2px;border:1px solid rgba(0,0,0,.15);display:inline-block}
+.rec{display:flex;align-items:center;justify-content:space-between;padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.rec:last-child{border-bottom:0}
+.rec .n{font-size:.92rem}
+.rec .v{font-size:1.25rem;font-weight:300;display:flex;align-items:center;gap:8px}
+.rec .v i{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+:root[data-theme="dark"] .rec .v i, :root[data-theme="dark"] .leg i{border-color:rgba(255,255,255,.45)}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .rec .v i, :root:not([data-theme="light"]) .leg i{border-color:rgba(255,255,255,.45)} }
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:6px 3px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--muted);font-size:.72rem;cursor:pointer;line-height:1.3}
+th b{color:var(--fg);font-weight:600}
+.d{font-size:.72rem;color:var(--muted);line-height:1.5;margin:4px 2px}
+.lbl{background:#fff;border:1.5px solid #0f2a5a;color:#0f2a5a;border-radius:12px;padding:0 6px;font:600 11px var(--font);white-space:nowrap;box-shadow:none}
+.lbl::before{display:none}
+.leaflet-popup-content{font-family:var(--font);margin:10px 14px}
+.leaflet-container{font-family:var(--font)}
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="./" aria-label="Torna a Marea Goro">‹</a>
+  <div><h1>Mappa <span>fondali</span></h1><div class="sub">acqua nei recinti, ora per ora</div></div>
+</header>
+
+<section class="card">
+  <div class="quando"><span class="t" id="oraTxt">adesso</span><span class="m">marea <b id="livTxt">–</b></span></div>
+  <svg class="spark" id="spark" viewBox="0 0 320 56" preserveAspectRatio="none"></svg>
+  <div class="ctl">
+    <button class="s" id="meno" type="button" aria-label="Un'ora prima">‹</button>
+    <input type="range" id="ora" min="-144" max="144" step="1" value="0" aria-label="Ora">
+    <button class="s" id="piu" type="button" aria-label="Un'ora dopo">›</button>
+    <button id="ora0" type="button">Adesso</button>
+  </div>
+  <div class="scala"><span>24 h fa</span><span>adesso</span><span>tra 24 h</span></div>
+</section>
+
+<div id="map"></div>
+<div class="leg">
+  <span><i style="background:#e9d29a"></i>fuori</span><span><i style="background:#bfe8ee"></i>&lt;10</span><span><i style="background:#7cc6d9"></i>10–20</span>
+  <span><i style="background:#3d93be"></i>20–40</span><span><i style="background:#1d5e94"></i>40–80</span><span><i style="background:#0f2a5a"></i>&gt;80 cm</span>
+  <span style="margin-left:auto">tocca un punto</span>
+</div>
+
+<section class="card">
+  <h2>Acqua nei recinti</h2>
+  <div id="lista"></div>
+</section>
+
+<section class="card">
+  <h2>Prossime basse</h2>
+  <div id="basse" class="d">carico…</div>
+</section>
+
+<div class="d">Acqua a metà recinto, circa ±15 cm. Fondale: rilievo Regione Emilia-Romagna 2012, aggiornato con foto satellitari Sentinel-2 2024–2026 (Crocai e Mistrin da aprile 2026). Marea: letture Arpae e previsione dell'app, con ~20 min di ritardo della Sacca.</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  // tema come nell'app (scelto col tasto sole/luna)
+  try { const th=localStorage.getItem('theme'); if(th) document.documentElement.setAttribute('data-theme', th); } catch(e){}
+  const dark = () => { const t=document.documentElement.getAttribute('data-theme'); return t==='dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches); };
+  document.querySelector('meta[name=theme-color]').setAttribute('content', dark()?'#0b1b36':'#ffffff');
+
+  const $ = id => document.getElementById(id);
+  const fmtM = v => (v>=0?'+':'−') + Math.abs(v).toFixed(2).replace('.',',') + ' m';
+  const cm = d => d<=0 ? 'fuori' : Math.round(d*100)+' cm';
+  const corto = n => n.replace('Impianto Vecchio/ Mistrin','Mistrin').replace('2o e 3o Pezzo','2° e 3° Pezzo').replace('1o Pezzo','1° Pezzo');
+  const colore = d => d<=0 ? [233,210,154] : d<0.1 ? [191,232,238] : d<0.2 ? [124,198,217] : d<0.4 ? [61,147,190] : d<0.8 ? [29,94,148] : [15,42,90];
+  const toUTM=(lat,lon,zone)=>{ const a=6378137,f=1/298.257223563,k0=0.9996,e2=f*(2-f),ep2=e2/(1-e2); const p=lat*Math.PI/180,l=lon*Math.PI/180,l0=((zone-1)*6-180+3)*Math.PI/180; const N=a/Math.sqrt(1-e2*Math.sin(p)**2),T=Math.tan(p)**2,C=ep2*Math.cos(p)**2,A=Math.cos(p)*(l-l0); const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*p-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*p)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*p)-(35*e2**3/3072)*Math.sin(6*p)); return [k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000, k0*(M+N*Math.tan(p)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720))]; };
+  const unb64 = s => { const b=atob(s), u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; };
+
+  /* ---- mappa: solo l'area dei recinti con la costa dello Scanno ---- */
+  let BOX=null, AREA=null, map=null, overlay=null, OW=0, OH=0, idx=null, Z=null, F=null, U=null, recinti=[], recPx=[];
+  function avviaMappa(){
+    AREA=L.latLngBounds([[BOX.s,BOX.w],[BOX.n,BOX.e]]);
+    map=L.map('map',{ maxBounds:AREA.pad(0.03), maxBoundsViscosity:1, zoomSnap:0.05, zoomDelta:0.5, maxZoom:19 });
+    map.attributionControl.setPrefix(false);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ maxZoom:19, maxNativeZoom:18, attribution:'© Esri' }).addTo(map);
+    // altezza della mappa = forma dell'area (quasi quadrata), così non resta spazio vuoto attorno
+    const fit=()=>{ const el=$('map'); const asp=(BOX.n-BOX.s)/((BOX.e-BOX.w)*Math.cos(44.8*Math.PI/180)); el.style.height=Math.round(Math.min(el.clientWidth*asp, window.innerHeight*0.75))+'px';
+      map.invalidateSize(); map.setMinZoom(0); map.fitBounds(AREA,{padding:[0,0]}); map.setMinZoom(map.getZoom()); };
+    fit(); window.addEventListener('resize', fit);
+    map.createPane('maschera'); map.getPane('maschera').style.zIndex=450; map.getPane('maschera').style.pointerEvents='none';
+    const bg=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#fff';
+    L.polygon([[[-89,-179],[-89,179],[89,179],[89,-179]],[[BOX.s,BOX.w],[BOX.n,BOX.w],[BOX.n,BOX.e],[BOX.s,BOX.e]]],{pane:'maschera',stroke:false,fillColor:bg,fillOpacity:1,interactive:false}).addTo(map);
+    map.on('click', e=>{ if(AREA.contains(e.latlng)) punto(e.latlng); });
+  }
+  function prepara(g){
+    U=g.utm; Z=new Int16Array(unb64(g.z).buffer); F=unb64(g.fonte);
+    OW=Math.min(900, Math.round(window.innerWidth*(window.devicePixelRatio||1))); OH=Math.round(OW*(BOX.n-BOX.s)/((BOX.e-BOX.w)*Math.cos(44.8*Math.PI/180))); idx=new Int32Array(OW*OH);
+    for(let j=0;j<OH;j++){ const lat=BOX.n-(j+0.5)/OH*(BOX.n-BOX.s); for(let i=0;i<OW;i++){ const lon=BOX.w+(i+0.5)/OW*(BOX.e-BOX.w); const [E,N]=toUTM(lat,lon,33); const x=Math.floor((E-U.x0)/U.res), y=Math.floor((U.y0-N)/U.res); idx[j*OW+i]=(x<0||y<0||x>=U.w||y>=U.h)?-1:y*U.w+x; } }
+    recPx = recinti.map(r=>{ const poly=r.coords.map(([lo,la])=>toUTM(la,lo,33)); const out=[]; const xs=poly.map(p=>p[0]), ys=poly.map(p=>p[1]);
+      for(let y=Math.max(0,Math.floor((U.y0-Math.max(...ys))/U.res)); y<=Math.min(U.h-1,Math.ceil((U.y0-Math.min(...ys))/U.res)); y++) for(let x=Math.max(0,Math.floor((Math.min(...xs)-U.x0)/U.res)); x<=Math.min(U.w-1,Math.ceil((Math.max(...xs)-U.x0)/U.res)); x++){
+        const E=U.x0+(x+0.5)*U.res, N=U.y0-(y+0.5)*U.res; let c=false; for(let a=0,b=poly.length-1;a<poly.length;b=a++){ const [xa,ya]=poly[a],[xb,yb]=poly[b]; if(((ya>N)!==(yb>N)) && (E<(xb-xa)*(N-ya)/(yb-ya)+xa)) c=!c; }
+        if(c && Z[y*U.w+x]!==-32768) out.push(Z[y*U.w+x]/100); }
+      return Float32Array.from(out).sort(); });
+  }
+  const mediana = (ri, lv) => { const v=recPx[ri]; return v.length ? lv - v[v.length>>1] : null; };
+
+  /* ---- marea nella Sacca da −24 h a +24 h: letture Arpae + previsione dell'app raccordata ---- */
+  const PASSO=10*60e3, LAG=20*60e3, T0=Math.floor(Date.now()/PASSO)*PASSO;
+  let OBS=[], FC=[], OFF=0, TLAST=0, MINS=[];
+  const interp=(s,t)=>{ if(!s.length||t<s[0].t||t>s[s.length-1].t) return null; let a=0,b=s.length-1; while(b-a>1){ const m=(a+b)>>1; if(s[m].t<=t) a=m; else b=m; } const p=s[a],q=s[b]; return q.t===p.t?p.v:p.v+(q.v-p.v)*(t-p.t)/(q.t-p.t); };
+  function pgAt(t){ if(OBS.length && t<=TLAST) return interp(OBS,t); const f=interp(FC,t); if(f==null) return OBS.length&&t-TLAST<30*60e3 ? OBS[OBS.length-1].v : null; return f+OFF*Math.exp(-(t-TLAST)/(4*3600e3)); }
+  const saccaAt = t => pgAt(t-LAG);
+  const tSel = () => T0+(+$('ora').value)*PASSO;
+  let ultimo=0; const lvSel = () => { const v=saccaAt(tSel()); if(v!=null) ultimo=v; return ultimo; };
+  const oraTesto = t => Math.round((t-T0)/PASSO)===0 ? 'adesso' : new Date(t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+  async function caricaMarea(){
+    try { const j=await (await fetch('https://apps.arpae.it/REST/meteo_opendata_stazioni_livello_del_mare_istantaneo?where='+encodeURIComponent(JSON.stringify({station_id:'14387',reftime:{$gte:new Date(T0-26*3600e3).toUTCString()}}))+'&sort=reftime&max_results=400')).json();
+      const raw=(j._items||[]).filter(i=>i.value!=null).map(i=>({t:Date.parse(i.reftime),v:i.value}));
+      OBS=raw.map((p,i)=>{ const a=raw.slice(Math.max(0,i-1),i+2); return {t:p.t,v:a.reduce((s,q)=>s+q.v,0)/a.length}; }); if(OBS.length) TLAST=OBS[OBS.length-1].t; } catch(e){}
+    try { const list=await (await fetch('https://api.github.com/repos/b93andrea-ctrl/marea-goro/contents/data/previsioni')).json();
+      const last=list.filter(f=>f.name.endsWith('.json')).map(f=>f.name).sort().pop();
+      const p=await (await fetch('data/previsioni/'+last)).json(); FC=p.ore.map((t,i)=>({t:Date.parse(t),v:p.fusa[i]})).filter(x=>x.v!=null); } catch(e){}
+    if(OBS.length && FC.length){ const f=interp(FC,TLAST); if(f!=null) OFF=OBS[OBS.length-1].v-f; }
+    // prossime basse nella Sacca (minimi della curva, nelle prossime 36 h)
+    MINS=[]; let prev=null, cur=null; for(let t=T0; t<=T0+36*3600e3; t+=PASSO){ const v=saccaAt(t); if(v==null) continue; if(prev && cur && cur.v<prev.v && cur.v<=v && cur.v<0.15) MINS.push(cur); prev=cur; cur={t,v}; }
+  }
+
+  /* ---- disegno ---- */
+  function disegna(){
+    const lv=lvSel(), t=tSel();
+    $('oraTxt').textContent=oraTesto(t); $('livTxt').textContent=fmtM(lv);
+    // grafico piccolo
+    const t0=T0-144*PASSO, t1=T0+144*PASSO, xs=tt=>(tt-t0)/(t1-t0)*320; const pts=[]; for(let tt=t0;tt<=t1;tt+=PASSO){ const v=saccaAt(tt); if(v!=null) pts.push([tt,v]); }
+    if(pts.length){ const lo=Math.min(...pts.map(p=>p[1]),-0.3), hi=Math.max(...pts.map(p=>p[1]),0.5), ys=v=>50-(v-lo)/(hi-lo)*44;
+      const sea=getComputedStyle(document.documentElement).getPropertyValue('--sea').trim(), sand=getComputedStyle(document.documentElement).getPropertyValue('--sand').trim(), line=getComputedStyle(document.documentElement).getPropertyValue('--line').trim();
+      $('spark').innerHTML = `<line x1="0" x2="320" y1="${ys(0)}" y2="${ys(0)}" stroke="${line}" stroke-width="1"/><line x1="${xs(T0)}" x2="${xs(T0)}" y1="2" y2="54" stroke="${line}" stroke-width="1.5" stroke-dasharray="3 3"/>`
+        + `<polyline fill="none" stroke="${sea}" stroke-width="1.8" vector-effect="non-scaling-stroke" points="${pts.map(p=>xs(p[0]).toFixed(1)+','+ys(p[1]).toFixed(1)).join(' ')}"/>`
+        + `<circle cx="${xs(t)}" cy="${ys(lv)}" r="4.5" fill="${sand}" stroke="#fff" stroke-width="1.5"/>`; }
+    // mappa
+    if(Z){ const cv=document.createElement('canvas'); cv.width=OW; cv.height=OH; const cx=cv.getContext('2d'); const im=cx.createImageData(OW,OH);
+      for(let k=0;k<OW*OH;k++){ const i=idx[k]; if(i<0) continue; const zz=Z[i]; if(zz===-32768) continue; const d=lv-zz/100; if(d<-0.6) continue; const c=colore(d); im.data[4*k]=c[0]; im.data[4*k+1]=c[1]; im.data[4*k+2]=c[2]; im.data[4*k+3]=d<=0?220:175; }
+      cx.putImageData(im,0,0); if(overlay) overlay.setUrl(cv.toDataURL()); else { overlay=L.imageOverlay(cv.toDataURL(),AREA).addTo(map); recinti.forEach(r=>r.layer.bringToFront()); } }
+    // elenco recinti
+    $('lista').innerHTML = recinti.map((r,ri)=>{ const d=mediana(ri,lv); const c=d==null?[200,200,200]:colore(d); return `<div class="rec" data-i="${ri}"><span class="n">${corto(r.nome)}</span><span class="v"><i style="background:rgb(${c})"></i>${d==null?'—':cm(d)}</span></div>`; }).join('');
+    document.querySelectorAll('.rec').forEach(el=>el.onclick=()=>map.fitBounds(recinti[+el.dataset.i].layer.getBounds(),{padding:[30,30]}));
+    if(sonda) sonda.setPopupContent(testoPunto());
+  }
+  function tabellaBasse(){
+    const bb=MINS.slice(0,3); if(!bb.length){ $('basse').textContent='previsione non disponibile'; return; }
+    let h=`<table><thead><tr><th></th>${bb.map(m=>`<th data-t="${m.t}">${new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'})}<br><b>${fmtM(m.v)}</b></th>`).join('')}</tr></thead><tbody>`;
+    recinti.forEach((r,ri)=>{ h+=`<tr><td>${corto(r.nome)}</td>${bb.map(m=>`<td><b>${cm(mediana(ri,m.v))}</b></td>`).join('')}</tr>`; });
+    $('basse').innerHTML=h+'</tbody></table>';
+    document.querySelectorAll('#basse th[data-t]').forEach(th=>th.onclick=()=>vaiA(+th.dataset.t));
+  }
+  const vaiA = t => { $('ora').value=Math.max(-144,Math.min(144,Math.round((t-T0)/PASSO))); disegna(); window.scrollTo({top:0,behavior:'smooth'}); };
+
+  /* ---- punto toccato ---- */
+  let sonda=null, sondaLL=null;
+  function recintoDi(ll){ for(const r of recinti){ let c=false; const g=r.coords; for(let a=0,b=g.length-1;a<g.length;b=a++){ const [xa,ya]=g[a],[xb,yb]=g[b]; if(((ya>ll.lat)!==(yb>ll.lat)) && (ll.lng<(xb-xa)*(ll.lat-ya)/(yb-ya)+xa)) c=!c; } if(c) return corto(r.nome); } return 'Fuori dai recinti'; }
+  function testoPunto(){
+    const [E,N]=toUTM(sondaLL.lat,sondaLL.lng,33); const x=Math.floor((E-U.x0)/U.res), y=Math.floor((U.y0-N)/U.res); const k=(x<0||y<0||x>=U.w||y>=U.h)?-1:y*U.w+x;
+    const nome=recintoDi(sondaLL); if(k<0||Z[k]===-32768) return `<b>${nome}</b><br>Terra`;
+    const z=Z[k]/100, prec={1:10,2:15,3:17}[F[k]]||15, lv=lvSel();
+    let h=`<div style="line-height:1.35"><b>${nome}</b><div style="font-size:28px;font-weight:300;color:#0f2a5a;margin:2px 0">${cm(lv-z)}</div><div style="color:#6f7c90;font-size:12px;margin-bottom:6px">${oraTesto(tSel())}</div>`;
+    for(const m of MINS.slice(0,3)) h+=`<div style="display:flex;justify-content:space-between;gap:16px;font-size:13px"><span>bassa ${new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</span><b>${cm(m.v-z)}</b></div>`;
+    return h+`<div style="color:#98a2b3;font-size:11px;margin-top:6px">fondo ${fmtM(z)} · ±${prec} cm</div></div>`;
+  }
+  function punto(ll){ sondaLL=ll; if(sonda) map.removeLayer(sonda);
+    sonda=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#c9a24a',fillOpacity:1}).addTo(map).bindPopup(testoPunto(),{maxWidth:280,autoPan:true}).openPopup();
+    sonda.on('popupclose',()=>{ if(sonda){ map.removeLayer(sonda); sonda=null; } }); }
+
+  /* ---- comandi ---- */
+  $('ora').oninput=disegna;
+  $('ora0').onclick=()=>{ $('ora').value=0; disegna(); };
+  $('meno').onclick=()=>{ $('ora').value=+$('ora').value-6; disegna(); };
+  $('piu').onclick=()=>{ $('ora').value=+$('ora').value+6; disegna(); };
+
+  /* ---- avvio ---- */
+  (async()=>{
+    const [g, fc] = await Promise.all([ fetch('data/fondali.json').then(r=>r.json()), fetch('data/recinti.json').then(r=>r.json()) ]);
+    BOX=g.area; avviaMappa();
+    recinti=fc.features.map(f=>{ const c=f.geometry.coordinates[0]; const layer=L.polygon(c.map(([lo,la])=>[la,lo]),{color:'#ff3b30',weight:2.5,fill:false,interactive:false}).addTo(map); layer.bindTooltip(corto(f.properties.nome),{permanent:true,direction:'center',className:'lbl'}); return { nome:f.properties.nome, coords:c.slice(0,-1), layer }; });
+    prepara(g); await caricaMarea(); disegna(); tabellaBasse();
+  })();
+})();
+</script>
+</body>
+</html>

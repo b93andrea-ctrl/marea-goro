@@ -72,6 +72,10 @@ svg.chart{width:100%;height:auto;display:block;touch-action:pan-y;cursor:crossha
 .card .v{font-family:var(--display);font-size:1.9rem;font-weight:300;line-height:1;color:var(--fg)}
 .card .v small{font-family:var(--font);font-size:.85rem;color:var(--muted);font-weight:500}
 .card .d{font-size:.8rem;color:var(--muted);margin-top:4px}
+a.fondlink{display:block;text-decoration:none;color:inherit}
+.fondrow{display:flex;align-items:center;gap:12px}
+.fondrow .d{flex:1;margin:0}
+.fondbtn{flex:none;border:1px solid var(--sand);border-radius:999px;padding:7px 14px;font-weight:500;font-size:.85rem;color:var(--fg)}
 details.shy summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:3px}
 details.shy summary::-webkit-details-marker{display:none}
 details.shy summary .h{font-family:var(--display);font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--sand);font-weight:500}
@@ -289,6 +293,11 @@ body{padding-bottom:76px}
     <div id="fish"></div>
     <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
   </div>
+
+  <a class="card wide fondlink" href="fondali.html">
+    <h2>Mappa fondali</h2>
+    <div class="fondrow"><span class="d">Acqua nei recinti ora per ora: tocca un punto per sapere quanta ce n'è, adesso e alle prossime basse.</span><span class="fondbtn">Apri ›</span></div>
+  </a>
 
   <details class="card wide shy" id="shyBox">
     <summary><span class="h">Sacca di Goro · modello Shyfer e stima</span><span class="pv" id="shySummary">apri per la mappa e la stima a Goro</span></summary>
