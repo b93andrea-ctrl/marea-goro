@@ -52,8 +52,11 @@ th:first-child,td:first-child{text-align:left}
 th{font-weight:500;color:var(--muted);font-size:.72rem;cursor:pointer;line-height:1.3}
 th b{color:var(--fg);font-weight:600}
 .d{font-size:.72rem;color:var(--muted);line-height:1.5;margin:4px 2px}
-.lbl{background:#fff;border:1.5px solid #0f2a5a;color:#0f2a5a;border-radius:12px;padding:0 6px;font:600 11px var(--font);white-space:nowrap;box-shadow:none}
+/* nomi dei recinti: solo testo, piccolo, con un alone chiaro; compaiono quando si ingrandisce */
+.lbl{background:none;border:0;box-shadow:none;padding:0;color:#fff;font:600 11px var(--font);white-space:nowrap;
+  text-shadow:0 0 3px #0b1b36,0 0 3px #0b1b36,0 1px 2px #0b1b36;opacity:.9}
 .lbl::before{display:none}
+#map.nonomi .lbl{display:none}
 .leaflet-popup-content{font-family:var(--font);margin:10px 14px}
 .leaflet-container{font-family:var(--font)}
 </style>
@@ -80,7 +83,7 @@ th b{color:var(--fg);font-weight:600}
 <div class="leg">
   <span><i style="background:#e9d29a"></i>fuori</span><span><i style="background:#bfe8ee"></i>&lt;10</span><span><i style="background:#7cc6d9"></i>10–20</span>
   <span><i style="background:#3d93be"></i>20–40</span><span><i style="background:#1d5e94"></i>40–80</span><span><i style="background:#0f2a5a"></i>&gt;80 cm</span>
-  <span style="margin-left:auto">tocca un punto</span>
+  <span style="margin-left:auto">tocca un punto · ingrandisci per i nomi</span>
 </div>
 
 <section class="card">
@@ -122,6 +125,9 @@ th b{color:var(--fg);font-weight:600}
     const fit=()=>{ const el=$('map'); const asp=(BOX.n-BOX.s)/((BOX.e-BOX.w)*Math.cos(44.8*Math.PI/180)); el.style.height=Math.round(Math.min(el.clientWidth*asp, window.innerHeight*0.75))+'px';
       map.invalidateSize(); map.setMinZoom(0); map.fitBounds(AREA,{padding:[0,0]}); map.setMinZoom(map.getZoom()); };
     fit(); window.addEventListener('resize', fit);
+    // nomi dei recinti solo quando si è ingranditi di almeno un passo rispetto alla vista intera
+    const nomi=()=>$('map').classList.toggle('nonomi', map.getZoom() < map.getMinZoom()+1);
+    map.on('zoomend', nomi); nomi();
     map.createPane('maschera'); map.getPane('maschera').style.zIndex=450; map.getPane('maschera').style.pointerEvents='none';
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#fff';
     L.polygon([[[-89,-179],[-89,179],[89,179],[89,-179]],[[BOX.s,BOX.w],[BOX.n,BOX.w],[BOX.n,BOX.e],[BOX.s,BOX.e]]],{pane:'maschera',stroke:false,fillColor:bg,fillOpacity:1,interactive:false}).addTo(map);
@@ -177,7 +183,7 @@ th b{color:var(--fg);font-weight:600}
       cx.putImageData(im,0,0); if(overlay) overlay.setUrl(cv.toDataURL()); else { overlay=L.imageOverlay(cv.toDataURL(),AREA).addTo(map); recinti.forEach(r=>r.layer.bringToFront()); } }
     // elenco recinti
     $('lista').innerHTML = recinti.map((r,ri)=>{ const d=mediana(ri,lv); const c=d==null?[200,200,200]:colore(d); return `<div class="rec" data-i="${ri}"><span class="n">${corto(r.nome)}</span><span class="v"><i style="background:rgb(${c})"></i>${d==null?'—':cm(d)}</span></div>`; }).join('');
-    document.querySelectorAll('.rec').forEach(el=>el.onclick=()=>map.fitBounds(recinti[+el.dataset.i].layer.getBounds(),{padding:[30,30]}));
+    document.querySelectorAll('.rec').forEach(el=>el.onclick=()=>{ map.fitBounds(recinti[+el.dataset.i].layer.getBounds(),{padding:[30,30]}); $('map').scrollIntoView({behavior:'smooth',block:'center'}); });
     if(sonda) sonda.setPopupContent(testoPunto());
   }
   function tabellaBasse(){
