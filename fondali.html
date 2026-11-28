@@ -65,11 +65,11 @@ th b{color:var(--fg);font-weight:600}
 <body>
 <header>
   <a class="back" href="./" aria-label="Torna a Marea Goro">‹</a>
-  <div><h1>Mappa <span>fondali</span></h1><div class="sub">acqua nei recinti, ora per ora</div></div>
+  <div><h1>Mappa <span>fondali</span></h1></div>
 </header>
 
 <section class="card">
-  <div class="quando"><span class="t" id="oraTxt">adesso</span><span class="m">marea <b id="livTxt">–</b></span></div>
+  <div class="quando"><span class="t" id="oraTxt">Adesso</span><span class="m">Marea <b id="livTxt">–</b></span></div>
   <svg class="spark" id="spark" viewBox="0 0 320 56" preserveAspectRatio="none"></svg>
   <div class="ctl">
     <button class="s" id="meno" type="button" aria-label="Un'ora prima">‹</button>
@@ -77,14 +77,14 @@ th b{color:var(--fg);font-weight:600}
     <button class="s" id="piu" type="button" aria-label="Un'ora dopo">›</button>
     <button id="ora0" type="button">Adesso</button>
   </div>
-  <div class="scala"><span>24 h fa</span><span>adesso</span><span>tra 24 h</span></div>
+  <div class="scala"><span>24 h fa</span><span>Adesso</span><span>Tra 24 h</span></div>
 </section>
 
 <div id="map"></div>
 <div class="leg">
-  <span><i style="background:#e9d29a"></i>fuori</span><span><i style="background:#bfe8ee"></i>&lt;10</span><span><i style="background:#7cc6d9"></i>10–20</span>
+  <span><i style="background:#e9d29a"></i>Fuori</span><span><i style="background:#bfe8ee"></i>&lt;10</span><span><i style="background:#7cc6d9"></i>10–20</span>
   <span><i style="background:#3d93be"></i>20–40</span><span><i style="background:#1d5e94"></i>40–80</span><span><i style="background:#0f2a5a"></i>&gt;80 cm</span>
-  <span style="margin-left:auto">tocca un punto · ingrandisci per i nomi</span>
+  <span style="margin-left:auto">Tocca un punto · ingrandisci per i nomi</span>
 </div>
 
 <section class="card">
@@ -94,10 +94,10 @@ th b{color:var(--fg);font-weight:600}
 
 <section class="card">
   <h2>Prossime basse</h2>
-  <div id="basse" class="d">carico…</div>
+  <div id="basse" class="d">Carico…</div>
 </section>
 
-<div class="d">Acqua a metà recinto, circa ±15 cm. Fondale: rilievo Regione Emilia-Romagna 2012, aggiornato con foto satellitari Sentinel-2 2024–2026 (Crocai e Mistrin da aprile 2026). Marea: letture Arpae e previsione dell'app, con ~20 min di ritardo della Sacca.</div>
+<div class="d">Precisione circa ±15 cm · fondale Regione 2012 aggiornato con satellite 2026.</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -155,7 +155,8 @@ th b{color:var(--fg);font-weight:600}
   const saccaAt = t => pgAt(t-LAG);
   const tSel = () => T0+(+$('ora').value)*PASSO;
   let ultimo=0; const lvSel = () => { const v=saccaAt(tSel()); if(v!=null) ultimo=v; return ultimo; };
-  const oraTesto = t => Math.round((t-T0)/PASSO)===0 ? 'adesso' : new Date(t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+  const oraTesto = t => Math.round((t-T0)/PASSO)===0 ? 'Adesso' : cap(new Date(t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'}));
+  function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
   async function caricaMarea(){
     try { const j=await (await fetch('https://apps.arpae.it/REST/meteo_opendata_stazioni_livello_del_mare_istantaneo?where='+encodeURIComponent(JSON.stringify({station_id:'14387',reftime:{$gte:new Date(T0-26*3600e3).toUTCString()}}))+'&sort=reftime&max_results=400')).json();
       const raw=(j._items||[]).filter(i=>i.value!=null).map(i=>({t:Date.parse(i.reftime),v:i.value}));
@@ -189,8 +190,8 @@ th b{color:var(--fg);font-weight:600}
     if(sonda){ sonda.setPopupContent(testoPunto()); posiziona(); }
   }
   function tabellaBasse(){
-    const bb=MINS.slice(0,3); if(!bb.length){ $('basse').textContent='previsione non disponibile'; return; }
-    let h=`<table><thead><tr><th></th>${bb.map(m=>`<th data-t="${m.t}">${new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'})}<br><b>${fmtM(m.v)}</b></th>`).join('')}</tr></thead><tbody>`;
+    const bb=MINS.slice(0,3); if(!bb.length){ $('basse').textContent='Previsione non disponibile'; return; }
+    let h=`<table><thead><tr><th></th>${bb.map(m=>`<th data-t="${m.t}">${cap(new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'}))}<br><b>${fmtM(m.v)}</b></th>`).join('')}</tr></thead><tbody>`;
     recinti.forEach((r,ri)=>{ h+=`<tr><td>${corto(r.nome)}</td>${bb.map(m=>`<td><b>${cm(mediana(ri,m.v))}</b></td>`).join('')}</tr>`; });
     $('basse').innerHTML=h+'</tbody></table>';
     document.querySelectorAll('#basse th[data-t]').forEach(th=>th.onclick=()=>vaiA(+th.dataset.t));
@@ -205,8 +206,8 @@ th b{color:var(--fg);font-weight:600}
     const nome=recintoDi(sondaLL); if(k<0||Z[k]===-32768) return `<b>${nome}</b><br>Terra`;
     const z=Z[k]/100, prec={1:10,2:15,3:17}[F[k]]||15, lv=lvSel();
     let h=`<div style="line-height:1.35"><b>${nome}</b><div style="font-size:28px;font-weight:300;color:#0f2a5a;margin:2px 0">${cm(lv-z)}</div><div style="color:#6f7c90;font-size:12px;margin-bottom:6px">${oraTesto(tSel())}</div>`;
-    for(const m of MINS.slice(0,3)) h+=`<div style="display:flex;justify-content:space-between;gap:16px;font-size:13px"><span>bassa ${new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</span><b>${cm(m.v-z)}</b></div>`;
-    return h+`<div style="color:#98a2b3;font-size:11px;margin-top:6px">fondo ${fmtM(z)} · ±${prec} cm</div></div>`;
+    for(const m of MINS.slice(0,3)) h+=`<div style="display:flex;justify-content:space-between;gap:16px;font-size:13px"><span>Bassa ${new Date(m.t).toLocaleString('it-IT',{weekday:'short',hour:'2-digit',minute:'2-digit'})}</span><b>${cm(m.v-z)}</b></div>`;
+    return h+`<div style="color:#98a2b3;font-size:11px;margin-top:6px">Fondo ${fmtM(z)} · ±${prec} cm</div></div>`;
   }
   function punto(ll){ sondaLL=ll; if(sonda) map.removeLayer(sonda);
     sonda=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#c9a24a',fillOpacity:1}).addTo(map).bindPopup(testoPunto(),{maxWidth:260,autoPan:false}).openPopup();

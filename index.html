@@ -43,8 +43,12 @@ body{padding-block:0 36px;padding-left:max(12px,env(safe-area-inset-left,0px));p
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
 header{position:relative;padding:calc(10px + env(safe-area-inset-top,0px)) 4px 10px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;border-bottom:1px solid var(--line);margin-bottom:14px}
 header .logo{height:58px;width:auto;display:block;mix-blend-mode:multiply}
+/* di notte: logo con fondo trasparente e oro più chiaro (il "multiply" sul blu lo rendeva quasi invisibile) */
+:root[data-theme="dark"] header .logo{content:url(logo-wave-notte.png);mix-blend-mode:normal}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) header .logo{content:url(logo-wave-notte.png);mix-blend-mode:normal} }
 h1{font-family:var(--display);font-size:1.15rem;margin:0;font-weight:300;letter-spacing:2.2px;line-height:1;text-transform:uppercase;color:var(--fg);white-space:nowrap}
 h1 span{color:var(--sand)}
+@media (max-width:420px){ h1{font-size:.98rem;letter-spacing:1.6px} } /* telefono: il titolo resta staccato dai tre tasti */
 .sub{font-size:.72rem;color:var(--muted);margin-top:5px;letter-spacing:.2px}
 button{font:inherit;font-weight:500;border:1px solid var(--sand);background:var(--card);color:var(--fg);border-radius:999px;padding:8px 14px;cursor:pointer}
 header button{padding:0;width:36px;height:36px;line-height:1;display:inline-flex;align-items:center;justify-content:center;font-size:1rem}
@@ -63,6 +67,7 @@ svg.chart{width:100%;height:auto;display:block;touch-action:pan-y;cursor:crossha
 .chart-simple .legend .x{display:none}
 .legend .lnk{margin-left:auto;border:0;background:none;padding:2px 4px;color:var(--sea);font-size:.78rem;font-weight:600;text-decoration:underline}
 .legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px;border-radius:2px}
+.ex .w::first-letter,#obsMaxWhen::first-letter,#obsMinWhen::first-letter,#fcMaxWhen::first-letter,#fcMinWhen::first-letter,.shywhen::first-letter{text-transform:uppercase}
 .hint{font-size:.78rem;color:var(--muted);margin:8px 4px 0;text-align:center}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
@@ -211,6 +216,9 @@ body{padding-bottom:76px}
 .nav button{border:0;background:none;color:var(--sand);display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;font-family:var(--display);font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;border-radius:0;width:100%;height:auto;line-height:1}
 .nav button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .nav button.on{color:var(--sea)}
+/* barra in basso: sabbia chiarissima di giorno, resta blu di notte */
+:root:not([data-theme="dark"]) .nav{background:#fbf6ea}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]) .nav{background:var(--card)} }
 .card .pv{margin:-4px 0 8px;font-size:.84rem;color:var(--fg)}
 [hidden]{display:none!important}
 /* impostazioni: pannello che sale dal basso, con le schede da mostrare */
@@ -270,14 +278,12 @@ input.sw:disabled{cursor:default}
     <span><i style="border-color:var(--crit)"></i>0,80 m</span>
     <button type="button" id="chartToggle" class="lnk" hidden>Più dettagli</button>
   </div>
-  <div class="hint">Tocca o trascina sul grafico per leggere ora e livello.</div>
-</section>
+  </section>
 
 <section class="grid">
   <div class="card wide" data-k="m-alte">
-    <h2>Prossime alte e basse previste (Porto Garibaldi)</h2>
+    <h2>Prossime alte e basse</h2>
     <div class="extrema" id="extrema"></div>
-    <div class="d">Dentro la Sacca la marea arriva con qualche decina di minuti di ritardo.</div>
   </div>
 
   <div class="card wide" data-k="m-24h">
@@ -303,22 +309,22 @@ input.sw:disabled{cursor:default}
 <section class="grid">
   <div class="card wide" id="fishBox" data-k="p-orari">
     <h2>Orari di pesca · prossimi 7 giorni</h2>
-    <div class="d pv" id="fishSummary">calcolo in corso…</div>
+    <div class="d pv" id="fishSummary">Calcolo in corso…</div>
     <div class="fishctl">
       <label>Livello da <input type="number" id="fishLo" step="5" min="-80" max="80" inputmode="numeric"> a <input type="number" id="fishHi" step="5" min="-80" max="80" inputmode="numeric"> cm</label>
-      <span class="d">dentro la Sacca (Porto Garibaldi <span class="lagTxt">+5 min se sale, +35 se scende</span>), da 1 h prima dell'alba a 1 h dopo il tramonto, finestre di almeno 2 ore</span>
+      <span class="d">Nella Sacca, con la luce, finestre da almeno 2 h.</span>
     </div>
     <div id="fish"></div>
-    <div class="d">Fino a 2 giorni: previsione corretta con le letture. Oltre: solo marea astronomica, il meteo può spostare le finestre. Vento previsto sul mare davanti a Goro (Open-Meteo).</div>
+    <div class="d">Dal 3° giorno solo marea astronomica: il meteo può spostare gli orari.</div>
   </div>
 
   <a class="card wide fondlink" href="fondali.html" data-k="p-fondali">
     <h2>Mappa fondali</h2>
-    <div class="fondrow"><span class="d">Acqua nei recinti ora per ora: tocca un punto per sapere quanta ce n'è, adesso e alle prossime basse.</span><span class="fondbtn">Apri ›</span></div>
+    <div class="fondrow"><span class="d">Acqua nei recinti, ora per ora.</span><span class="fondbtn">Apri ›</span></div>
   </a>
 
   <details class="card wide shy" id="shyBox" data-k="p-shyfer">
-    <summary><span class="h">Sacca di Goro · modello Shyfer e stima</span><span class="pv" id="shySummary">apri per la mappa e la stima a Goro</span></summary>
+    <summary><span class="h">Sacca di Goro · modello Shyfer e stima</span><span class="pv" id="shySummary">Apri per la mappa e la stima a Goro</span></summary>
     <div class="shyctl">
       <button type="button" id="shyPrev" aria-label="Ora precedente">‹</button>
       <input type="range" id="shySlider" min="0" max="71" value="0" aria-label="Ora della mappa">
@@ -361,7 +367,7 @@ input.sw:disabled{cursor:default}
   </div>
 
   <details class="card wide shy" id="windyBox" data-k="t-vento">
-    <summary><span class="h">Mappa del vento in movimento</span><span class="pv">apri per la mappa animata di Windy (modello ECMWF) centrata sulla Sacca</span></summary>
+    <summary><span class="h">Mappa del vento in movimento</span><span class="pv">Mappa animata del vento</span></summary>
     <div class="windyctl">
       <button type="button" data-ov="wind" class="on">Vento</button>
       <button type="button" data-ov="gust">Raffiche</button>
@@ -374,7 +380,7 @@ input.sw:disabled{cursor:default}
   </details>
 
   <div class="card wide" data-k="t-allerta">
-    <h2>Allerta protezione civile · costa ferrarese (zona D2)</h2>
+    <h2>Allerta protezione civile</h2>
     <div id="alert"></div>
   </div>
 
@@ -389,7 +395,7 @@ input.sw:disabled{cursor:default}
 <section class="grid">
   <div class="card wide" id="poBox">
     <h2>Po · livelli e arrivo acque</h2>
-    <div class="d pv" id="poSummary">carico gli idrometri…</div>
+    <div class="d pv" id="poSummary">Carico gli idrometri…</div>
     <select id="pvEvent" class="pvsel" aria-label="Periodo da vedere">
       <option value="now">Adesso e prossimi 3 giorni</option>
       <option value="2025-04">Piena di aprile 2025</option>
@@ -440,6 +446,14 @@ const AM = 'https://allertameteo.regione.emilia-romagna.it/';
 const ST_PG = '14387', ST_PG2 = '14422';
 const TZ = 'Europe/Rome';
 const $ = id => document.getElementById(id);
+const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s; // maiuscola a inizio frase
+// "Bollettino di vigilanza 185/2026 valido dalle 00:00 del 28/11/2026: nessuna allerta." → "Nessuna allerta · bollettino del 28/11"
+function bollettino(t){
+  if(!t) return '';
+  const g = t.match(/(\d{1,2}\/\d{1,2})\/\d{4}/);
+  const dopo = t.includes(': ') ? t.slice(t.lastIndexOf(': ')+2).replace(/\.\s*$/,'') : '';
+  return dopo ? `${cap(dopo)} · bollettino${g?' del '+g[1]:''}` : t;
+}
 
 const fmtT = d => new Intl.DateTimeFormat('it-IT',{hour:'2-digit',minute:'2-digit',timeZone:TZ}).format(d);
 const fmtD = d => new Intl.DateTimeFormat('it-IT',{weekday:'short',day:'numeric',timeZone:TZ}).format(d);
@@ -698,9 +712,9 @@ async function pvSelectEvent(key){
   const sl=$('pvSlider');
   if(pvState.playing){ clearInterval(pvState.timer); pvState.playing=false; $('pvPlay').textContent='▶'; }
   if(key==='now'){ pvState.replay=null; sl.min=-24; sl.max=72; pvSet(0); return; }
-  $('pvWhen').textContent='scarico i dati storici…';
+  $('pvWhen').textContent='Scarico i dati storici…';
   try{ const rep = await fetchPoEvent(key); pvState.replay=rep; sl.min=0; sl.max=Math.round((rep.t1-rep.t0)/3600e3); pvSet(0); }
-  catch(e){ $('pvWhen').textContent='storico non raggiungibile'; }
+  catch(e){ $('pvWhen').textContent='Storico non raggiungibile'; }
 }
 $('pvEvent').addEventListener('change', e=>pvSelectEvent(e.target.value));
 function pvSet(h){ const sl=$('pvSlider'); pvState.h=Math.max(+sl.min,Math.min(+sl.max,Math.round(h))); sl.value=pvState.h; drawPoMap(); }
@@ -712,7 +726,7 @@ function renderPo(po){
   const el=$('po'), sum=$('poSummary');
   pvState.po = po; if(po && curTab==='po') activatePo();
   if(!po){ el.innerHTML='<div class="d">Idrometri non raggiungibili al momento.</div>'; sum.textContent='livelli non disponibili'; return; }
-  const pill = r => { if(r.v==null) return ''; const c = (r.s3&&r.v>=r.s3)?'red':(r.s2&&r.v>=r.s2)?'orange':(r.s1&&r.v>=r.s1)?'yellow':'green'; return `<span class="pill ${c}">${{green:'ok',yellow:'attenz.',orange:'piena',red:'piena forte'}[c]}</span>`; };
+  const pill = r => { if(r.v==null) return ''; const c = (r.s3&&r.v>=r.s3)?'red':(r.s2&&r.v>=r.s2)?'orange':(r.s1&&r.v>=r.s1)?'yellow':'green'; return `<span class="pill ${c}">${{green:'OK',yellow:'Attenz.',orange:'Piena',red:'Piena forte'}[c]}</span>`; };
   const d24 = r => (r.v==null||r.v24==null) ? '' : `${r.v-r.v24>=0.005?'+':r.v-r.v24<=-0.005?'−':'±'}${Math.abs(r.v-r.v24).toFixed(2).replace('.',',')}`;
   const trendCls = r => (r.v==null||r.v24==null) ? '' : (r.v-r.v24>=0.1?' up':(r.v-r.v24<=-0.1?' down':''));
   const get = n => po.rows.find(r=>r.n.startsWith(n));
@@ -1138,8 +1152,8 @@ function render(data){
   // avviso di affidabilità: ultima emissione scartata, o nostro modello e Adriac in disaccordo
   const fchip=$('fcChip');
   const badLatest = adr.maeLatest!=null && adr.maeLatest>0.25;
-  if(fused && fused.dmax>0.25){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`previsioni in disaccordo fino a ${Math.round(fused.dmax*100)} cm: affidabilità bassa`; }
-  else if(badLatest){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`ultima Adriac fuori strada (${Math.round(adr.maeLatest*100)} cm): uso le precedenti e il modello meteo`; }
+  if(fused && fused.dmax>0.25){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`Affidabilità bassa (±${Math.round(fused.dmax*100)} cm)`; }
+  else if(badLatest){ fchip.hidden=false; fchip.className='chip'; fchip.textContent=`Ultima Adriac fuori strada (${Math.round(adr.maeLatest*100)} cm): uso le precedenti e il modello meteo`; }
   else fchip.hidden=true;
 
   // sensore fermo: Arpae non pubblica letture da più di 50 minuti (di norma arrivano con ~20 min di ritardo)
@@ -1150,17 +1164,17 @@ function render(data){
     const ago = Math.round((now-last.t)/60e3);
     const prevS = sub.filter(p=>p.t<=subLast.t-30*60e3).pop();
     const dv = prevS ? subLast.v-prevS.v : null;
-    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
+    const arrow = dv==null?'':(dv>0.015?'↗ Sale':dv<-0.015?'↘ Scende':'→ Stabile');
     const off = Math.round(cerviaOffset()*100);
-    $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">stima da Cervia ${fmtT(new Date(now))}</em></small>`;
+    $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">Stima da Cervia ${fmtT(new Date(now))}</em></small>`;
     $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · ⚠ Porto Garibaldi fermo dalle ${fmtT(new Date(last.t))} (${agoTxt(ago)}): uso Cervia ${off>=0?'+':'−'}${Math.abs(off)} cm, lettura delle ${fmtT(new Date(subLast.t))}`;
     $('trend').title = `Il mareografo di Porto Garibaldi non pubblica. Al suo posto si usa quello di Cervia, che ha la stessa ora di marea ed è in media ${Math.abs(off)} cm più ${off>=0?'basso':'alto'} (errore medio circa 4 cm). Torna a Porto Garibaldi appena riparte.`;
   } else if(last && stale && fcNow!=null){
     const ago = Math.round((now-last.t)/60e3);
     const f30 = interp(cf.series, now+30*60e3), dv = f30!=null ? f30-fcNow : null;
-    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
-    $('levelNow').innerHTML = `${m(fcNow)}<small> m <em style="font-style:normal;font-size:.75rem">previsione ${fmtT(new Date(now))}</em></small>`;
-    $('trend').textContent = `${arrow} · ⚠ mareografo fermo: ultima lettura Arpae ${m(last.v)} m alle ${fmtT(new Date(last.t))} (${agoTxt(ago)})`;
+    const arrow = dv==null?'':(dv>0.015?'↗ Sale':dv<-0.015?'↘ Scende':'→ Stabile');
+    $('levelNow').innerHTML = `${m(fcNow)}<small> m <em style="font-style:normal;font-size:.75rem">Previsione ${fmtT(new Date(now))}</em></small>`;
+    $('trend').textContent = `${arrow} · ⚠ Mareografo fermo: ultima lettura Arpae ${m(last.v)} m alle ${fmtT(new Date(last.t))} (${agoTxt(ago)})`;
     $('trend').title = 'Arpae non pubblica nuove letture: il numero è la previsione per adesso, non una misura. Torna alla misura appena arrivano letture nuove.';
   } else if(last){
     const ago = Math.round((now-last.t)/60e3);
@@ -1168,30 +1182,30 @@ function render(data){
     const avg = a => a.reduce((s,p)=>s+p.v,0)/a.length;
     const rec = obs.filter(p=>p.t>last.t-25*60e3), old = obs.filter(p=>p.t>last.t-55*60e3 && p.t<=last.t-30*60e3);
     const dv = (rec.length && old.length) ? avg(rec)-avg(old) : null;
-    const arrow = dv==null?'':(dv>0.015?'↗ sale':dv<-0.015?'↘ scende':'→ stabile');
+    const arrow = dv==null?'':(dv>0.015?'↗ Sale':dv<-0.015?'↘ Scende':'→ Stabile');
     if(nc){
-      $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">stima ${fmtT(new Date(now))}</em></small>`;
-      $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · ultima lettura Arpae ${m(last.v)} m alle ${fmtT(new Date(last.t))} (${ago} min fa)`;
+      $('levelNow').innerHTML = `${m(nc.v)}<small> m <em style="font-style:normal;font-size:.75rem">Stima ${fmtT(new Date(now))}</em></small>`;
+      $('trend').textContent = `${arrow} · lettura delle ${fmtT(new Date(last.t))}`;
       $('trend').title = 'Stima: ultima lettura prolungata con l\'andamento della previsione; si ricalibra a ogni nuova lettura. Arpae pubblica con circa 20 minuti di ritardo.';
     } else {
       $('levelNow').innerHTML = `${m(last.v)}<small> m</small>`;
-      $('trend').textContent = `${arrow}${dv!=null?' ('+cm(dv)+' cm in 30 min)':''} · lettura delle ${fmtT(new Date(last.t))} (${ago} min fa)`;
+      $('trend').textContent = `${arrow} · lettura delle ${fmtT(new Date(last.t))}`;
       $('trend').title = 'Arpae pubblica ogni lettura con circa 20 minuti di ritardo.';
     }
   }
   const nx = ext.filter(e=>e.t>now).slice(0,2);
-  $('nextExt').innerHTML = nx.map(e=>`${e.type==='alta'?'Alta':'Bassa'} <b>${fmtT(new Date(e.t))}</b> ${m(e.v)} m`).join('<br>');
+  // le prossime alte e basse sono già nella scheda subito sotto: qui non si ripetono
 
-  $('extrema').innerHTML = ext.filter(e=>e.t>now).slice(0,6).map(e=>`<div class="ex ${e.type}"><div class="t">${e.type==='alta'?'▲ alta':'▼ bassa'}</div><div class="h">${fmtT(new Date(e.t))}</div><div class="w">${fmtD(new Date(e.t))} · ${m(e.v)} m</div></div>`).join('') || '<div class="d">Nessun estremo nelle prossime 48 h.</div>';
+  $('extrema').innerHTML = ext.filter(e=>e.t>now).slice(0,6).map(e=>`<div class="ex ${e.type}"><div class="t">${e.type==='alta'?'▲ Alta':'▼ Bassa'}</div><div class="h">${fmtT(new Date(e.t))}</div><div class="w">${fmtD(new Date(e.t))} · ${m(e.v)} m</div></div>`).join('') || '<div class="d">Nessun estremo nelle prossime 48 h.</div>';
 
   // scostamento
   if(last){
     const lastS = (stale && subLive) ? subLast : last; // con Porto Garibaldi fermo, lo scostamento si legge su Cervia
     const f = interp(adr.series,lastS.t) ?? interp(fc.prev,lastS.t);
     if(f!=null){ const s=lastS.v-f; $('surge').innerHTML = `${cm(s)}<small> cm</small>`; $('surge').style.color = Math.abs(s)>0.15?'var(--crit)':Math.abs(s)>0.08?'var(--warn)':'inherit';
-      $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>mare ${cm(s)} cm`;
+      $('stripSurge').innerHTML = `<i class="dot ${Math.abs(s)>0.15?'red':Math.abs(s)>0.08?'yellow':'green'}"></i>Mare ${cm(s)} cm`;
       const chip=$('surgeChip'); const big=Math.abs(s)>=0.08 && (!stale || subLive); // uno scostamento di ore fa non dice nulla di adesso
-      chip.hidden=!big; if(big){ chip.className='chip'+(Math.abs(s)>0.15?' crit':''); chip.textContent=`mare ${Math.round(Math.abs(s)*100)} cm ${s>0?'sopra':'sotto'} la previsione`; } }
+      chip.hidden=!big; if(big){ chip.className='chip'+(Math.abs(s)>0.15?' crit':''); chip.textContent=`Mare ${Math.round(Math.abs(s)*100)} cm ${s>0?'sopra':'sotto'} la previsione`; } }
     else $('surgeChip').hidden=true;
   }
   // 24h osservato
@@ -1202,23 +1216,23 @@ function render(data){
     $('obsMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('obsMinWhen').textContent = `alle ${fmtT(new Date(mn.t))}`;
   }
   // correzione applicata
-  $('surgeCorr').textContent = cf ? `Previsione corretta di ${cm(cf.offW)} cm per le prossime ore.` : 'Previsione non corretta: poche letture recenti.';
+  $('surgeCorr').textContent = cf ? `Scarto tra misura e previsione. L'app corregge le prossime ore di ${cm(cf.offW)} cm.` : 'Previsione non corretta: poche letture recenti.';
   // vento e pressione
   if(meteo){
     const dirName = a => a==null?'':['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(a/22.5)%16];
     const kmh = meteo.spd ? Math.round(meteo.spd.v*3.6) : null;
     const kn = meteo.spd ? (meteo.spd.v*1.9438).toFixed(0) : null;
-    const wind = meteo.spd ? `<div class="mv">${kmh}<small> km/h</small> ${meteo.dir!=null?`da ${dirName(meteo.dir)}`:''}</div><div class="d">${kn} nodi · ${meteo.spd.st}</div>` : '<div class="d">non disponibile</div>';
+    const wind = meteo.spd ? `<div class="mv">${kmh}<small> km/h</small> ${meteo.dir!=null?`da ${dirName(meteo.dir)}`:''}</div><div class="d">${kn} nodi · ${meteo.spd.st}</div>` : '<div class="d">Non disponibile</div>';
     const p3 = meteo.prs && meteo.prs.d3!=null ? meteo.prs.d3 : null;
     const tend = p3==null ? '' : Math.abs(p3)<0.5 ? 'stabile' : (p3>0?'↗ +':'↘ −')+Math.abs(p3).toFixed(1).replace('.',',')+' hPa in 3 h';
-    const prs = meteo.prs ? `<div class="mv">${meteo.prs.v.toFixed(1).replace('.',',')}<small> hPa</small></div><div class="d">${tend}${tend?' · ':''}${meteo.prs.st}</div>` : '<div class="d">non disponibile</div>';
+    const prs = meteo.prs ? `<div class="mv">${meteo.prs.v.toFixed(1).replace('.',',')}<small> hPa</small></div><div class="d">${tend}${tend?' · ':''}${meteo.prs.st}</div>` : '<div class="d">Non disponibile</div>';
     // lettura rapida: scirocco/levante e pressione in calo alzano il mare; bora/maestrale e alta pressione lo abbassano
     let hint='';
     if(meteo.spd && meteo.dir!=null && kmh>=15){ const a=meteo.dir; hint = (a>=70&&a<=170) ? 'Vento da mare (scirocco/levante): tende ad alzare il livello.' : (a>=0&&a<=60)||a>=340 ? 'Bora: mare mosso, livello spesso sotto la previsione.' : (a>=200&&a<=330) ? 'Vento da terra: tende ad abbassare il livello.' : ''; }
     else if(meteo.prs && p3!=null && p3<=-2) hint='Pressione in calo rapido: possibile sovralzo nelle prossime ore.';
     $('meteo').innerHTML = `<div><div class="lbl">Vento</div>${wind}</div><div><div class="lbl">Pressione</div>${prs}</div>` + (hint?`<div class="d" style="grid-column:1/-1;margin-top:0">${hint}</div>`:'') + `<div class="d" style="grid-column:1/-1;margin-top:0">Letture delle ${fmtT(new Date(meteo.time))}.</div>`;
-    $('stripWind').innerHTML = meteo.spd ? `<i class="dot ${kmh>=30?'red':kmh>=20?'yellow':'green'}"></i>vento ${kmh} km/h${meteo.dir!=null?' da '+dirName(meteo.dir):''}` : '<i class="dot"></i>vento n.d.';
-  } else { $('meteo').innerHTML = '<div class="d" style="grid-column:1/-1">Vento e pressione: fonte non raggiungibile.</div>'; $('stripWind').innerHTML = '<i class="dot"></i>vento n.d.'; }
+    $('stripWind').innerHTML = meteo.spd ? `<i class="dot ${kmh>=30?'red':kmh>=20?'yellow':'green'}"></i>Vento ${kmh} km/h${meteo.dir!=null?' da '+dirName(meteo.dir):''}` : '<i class="dot"></i>Vento n.d.';
+  } else { $('meteo').innerHTML = '<div class="d" style="grid-column:1/-1">Vento e pressione: fonte non raggiungibile.</div>'; $('stripWind').innerHTML = '<i class="dot"></i>Vento n.d.'; }
   // previsione 48h (corretta)
   const f48 = fcUse.filter(p=>p.t>=now&&p.t<=now+48*3600e3);
   if(f48.length){
@@ -1228,21 +1242,21 @@ function render(data){
     $('fcMin').innerHTML = `${m(mn.v)}<small> m</small>`; $('fcMinWhen').textContent = fmtDT(new Date(mn.t));
     const wTxt = (adr.weights && adr.ems) ? adr.ems.map((e,i)=>`${fmtD(new Date(e.t0))} ${Math.round(adr.weights[i]*100)} %`).join(', ') : `${fmtD(fc.emission)}`;
     $('fcEmission').textContent = fused && fused.src==='fusa'
-      ? `Previsione combinata: modello meteo ${Math.round((1-fused.wA)*100)} %, Adriac ${Math.round(fused.wA*100)} % (emissioni ${wTxt}).`
-      : `Adriac: emissioni ${wTxt}.`;
+      ? ''
+      : '';
   }
   // allerta
   if(alert){
     const z = alert.D2||{};
-    const pill = c => `<span class="pill ${c||''}">${{green:'verde',yellow:'giallo',orange:'arancione',red:'rosso'}[c]||'n.d.'}</span>`;
+    const pill = c => `<span class="pill ${c||''}">${{green:'Verde',yellow:'Giallo',orange:'Arancione',red:'Rosso'}[c]||'n.d.'}</span>`;
     $('alert').innerHTML = `
       <div class="row"><span>Mareggiate</span>${pill(z.mareggiate)}</div>
       <div class="row"><span>Stato del mare</span>${pill(z.stato_mare)}</div>
       <div class="row"><span>Vento</span>${pill(z.vento)}</div>
       <div class="row"><span>Piene dei fiumi</span>${pill(z.idraulica)}</div>
-      <div class="d" style="margin-top:8px">${alert.titolo||''}${alert.link?` · <a href="https://allertameteo.regione.emilia-romagna.it${alert.link}" target="_blank" rel="noopener">PDF</a>`:''}</div>`;
+      <div class="d" style="margin-top:8px">${bollettino(alert.titolo)}${alert.link?` · <a href="https://allertameteo.regione.emilia-romagna.it${alert.link}" target="_blank" rel="noopener">PDF</a>`:''}</div>`;
     const lv={green:0,yellow:1,orange:2,red:3}; const worst=['mareggiate','stato_mare','vento','idraulica'].reduce((w,k)=>Math.max(w, lv[z[k]]||0), 0);
-    $('stripAlert').innerHTML = `<i class="dot ${['green','yellow','orange','red'][worst]}"></i>allerta ${['verde','gialla','arancione','rossa'][worst]}`;
+    $('stripAlert').innerHTML = `<i class="dot ${['green','yellow','orange','red'][worst]}"></i>Allerta ${['verde','gialla','arancione','rossa'][worst]}`;
   } else $('stripAlert').innerHTML = '<i class="dot"></i>allerta n.d.';
   // altri mareografi
   if(!others) $('others').innerHTML = '<div class="d">Fonte non raggiungibile, riprovo tra poco.</div>';
@@ -1310,7 +1324,7 @@ function renderShyfer(){
   const d = shyState.data, now = Date.now();
   if(!d || !d.maps.length){
     const g = goroEstimate(now);
-    $('shySummary').textContent = (g ? `stima a Goro adesso ${m(g.v)} m · ` : '') + (shyState.failed ? 'modello non raggiungibile al momento' : 'apri per la mappa del modello');
+    $('shySummary').textContent = (g ? `Stima a Goro adesso ${m(g.v)} m · ` : '') + (shyState.failed ? 'Modello non raggiungibile al momento' : 'Apri per la mappa del modello');
     $('shyTable').innerHTML=''; $('shyNote').textContent=''; return;
   }
   const sl = $('shySlider'); sl.max = d.maps.length-1;
@@ -1318,7 +1332,7 @@ function renderShyfer(){
   if(shyState.idx==null || shyState.idx>=d.maps.length) shyState.idx = nowIdx;
   $('shyLeg').innerHTML = d.legend.map(l=>`<span><i style="background:${l.color}"></i>${l.lo.toFixed(1).replace('.',',')}…${l.hi.toFixed(1).replace('.',',')}</span>`).join('');
   const g = goroEstimate(now);
-  $('shySummary').textContent = g ? `stima a Goro adesso ${m(g.v)} m · emissione del ${fmtD(d.emission)}` : `emissione del ${fmtD(d.emission)}`;
+  $('shySummary').textContent = g ? `Stima a Goro adesso ${m(g.v)} m · emissione del ${fmtD(d.emission)}` : `Emissione del ${fmtD(d.emission)}`;
   showShyMap(shyState.idx);
 }
 function showShyMap(i){
@@ -1362,7 +1376,7 @@ $('shyNow').addEventListener('click', ()=>{ shyState.idx=null; renderShyfer(); }
 $('shyBox').addEventListener('toggle', async ()=>{
   if(!$('shyBox').open) return;
   if(!shyState.data){ // primo accesso: scarica il catalogo delle mappe (una richiesta), poi rendi
-    $('shySummary').textContent='scarico il modello…';
+    $('shySummary').textContent='Scarico il modello…';
     try{ shyState.data = await fetchShyfer(); shyState.failed=false; }catch(e){ shyState.failed=true; }
     renderShyfer(); return;
   }
@@ -1410,7 +1424,7 @@ function renderFish(){
     if(cur) wins.push(cur);
     const good = wins.filter(w=>w.b-w.a>=2*3600e3); // sotto le 2 ore non vale la pena
     const astroOnly = from > now+46*3600e3;
-    html += `<div class="fd${di===0?' today':''}"><h3><span>${fmtDay.format(new Date(d.rise))}</span><small>alba ${fmtT(new Date(d.rise))} · tramonto ${fmtT(new Date(d.set))}${astroOnly?' · solo astronomica':''}</small></h3>`;
+    html += `<div class="fd${di===0?' today':''}"><h3><span>${fmtDay.format(new Date(d.rise))}</span>${di===0?`<small>Alba ${fmtT(new Date(d.rise))} · tramonto ${fmtT(new Date(d.set))}</small>`:''}</h3>`;
     if(!good.length){ html += `<div class="none">${to<now?'Giornata passata.':(wins.length?'Nessuna finestra di almeno 2 ore.':'Nessuna finestra: di giorno il livello resta fuori dalle soglie.')}</div></div>`; return; }
     for(const w of good){
       let spd=0, gust=0, rain=0, dirs=[], n=0;
@@ -1418,20 +1432,20 @@ function renderFish(){
       const dir = dirs.length ? dirName(dirs[Math.floor(dirs.length/2)]) : '';
       const cls = (spd>=30||gust>=45) ? 'bad' : (spd>=20||gust>=30||rain>=1) ? 'meh' : 'ok';
       const notes = [];
-      if(spd>=30||gust>=45) notes.push(`vento forte ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: condizioni difficili`);
-      else if(spd>=20||gust>=30) notes.push(`vento ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: vento moderato`);
+      if(spd>=30||gust>=45) notes.push(`Vento forte ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: condizioni difficili`);
+      else if(spd>=20||gust>=30) notes.push(`Vento ${Math.round(spd)} km/h da ${dir}, raffiche ${Math.round(gust)}: moderato`);
       else if(n) notes.push(`vento ${Math.round(spd)} km/h da ${dir}`);
       if(rain>=1) notes.push(`pioggia ${rain.toFixed(rain<10?1:0).replace('.',',')} mm`);
       const seaWind = dirs.length && (dirs[Math.floor(dirs.length/2)]>=60 && dirs[Math.floor(dirs.length/2)]<=170) && spd>=15;
       if(seaWind && !astroOnly) notes.push('vento da mare: il livello può salire più del previsto');
       if(w.a<=now && w.b>=now) notes.unshift('in corso');
       if(!preview) preview = `${di===0?'oggi':di===1?'domani':fmtD(new Date(w.a))} ${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}${cls==='ok'?'':cls==='meh'?' · vento moderato':' · condizioni difficili'}`;
-      html += `<div class="w ${cls}"><b>${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}</b><span>${dur(w.b-w.a)} · ${m(w.vmin)}…${m(w.vmax)} m<br><span class="i">${notes.join(' · ')}</span></span></div>`;
+      html += `<div class="w ${cls}"><b>${fmtT(new Date(w.a))}–${fmtT(new Date(w.b))}</b><span>${dur(w.b-w.a)} · ${m(w.vmin)}…${m(w.vmax)} m<br><span class="i">${cap(notes.join(' · '))}</span></span></div>`;
     }
     html += '</div>';
   });
   el.innerHTML = `<div class="fish">${html}</div>`;
-  $('fishSummary').textContent = preview ? `prossima finestra: ${preview}` : 'nessuna finestra di almeno 2 ore nei prossimi 7 giorni';
+  $('fishSummary').textContent = preview ? `Prossima finestra: ${preview}` : 'Nessuna finestra di almeno 2 ore nei prossimi 7 giorni';
 }
 function saveFishRange(){
   let lo=+$('fishLo').value, hi=+$('fishHi').value; if(isNaN(lo)||isNaN(hi)) return; if(lo>hi){ const t=lo; lo=hi; hi=t; }
@@ -1492,7 +1506,7 @@ async function load(){
     try{ const c=JSON.parse(localStorage.getItem('marea-cache')||'null'); if(c){ data=c.data; $('status').textContent='Offline · dati del '+fmtDT(new Date(c.at)); } }catch(e){}
   } else {
     try{ localStorage.setItem('marea-cache',JSON.stringify({at:Date.now(),data})); }catch(e){}
-    $('status').textContent = `Aggiornato ${fmtT(new Date())}` + (fc?` · Adriac del ${fmtD(fc.emission)}${met?' + modello meteo':''}`:'');
+    $('status').textContent = `Aggiornato ${fmtT(new Date())}`;
   }
   try{ render(data); }catch(e){ errs.push('rendering: '+e.message); }
   if(errs.length){ $('error').textContent='Fonti non raggiunte in questo aggiornamento: '+errs.map(e=>e.split(':')[0]).join(', ')+'.'; $('error').hidden=false; }
