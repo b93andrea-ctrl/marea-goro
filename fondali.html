@@ -58,6 +58,7 @@ th b{color:var(--fg);font-weight:600}
 .lbl::before{display:none}
 #map.nonomi .lbl{display:none}
 .leaflet-popup-content{font-family:var(--font);margin:10px 14px}
+.leaflet-popup.libera{margin-bottom:0} .leaflet-popup.libera .leaflet-popup-tip-container{display:none}
 .leaflet-container{font-family:var(--font)}
 </style>
 </head>
@@ -132,6 +133,7 @@ th b{color:var(--fg);font-weight:600}
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--card').trim()||'#fff';
     L.polygon([[[-89,-179],[-89,179],[89,179],[89,-179]],[[BOX.s,BOX.w],[BOX.n,BOX.w],[BOX.n,BOX.e],[BOX.s,BOX.e]]],{pane:'maschera',stroke:false,fillColor:bg,fillOpacity:1,interactive:false}).addTo(map);
     map.on('click', e=>{ if(AREA.contains(e.latlng)) punto(e.latlng); });
+    map.on('zoomend moveend', posiziona);
   }
   function prepara(g){
     U=g.utm; Z=new Int16Array(unb64(g.z).buffer); F=unb64(g.fonte);
@@ -184,7 +186,7 @@ th b{color:var(--fg);font-weight:600}
     // elenco recinti
     $('lista').innerHTML = recinti.map((r,ri)=>{ const d=mediana(ri,lv); const c=d==null?[200,200,200]:colore(d); return `<div class="rec" data-i="${ri}"><span class="n">${corto(r.nome)}</span><span class="v"><i style="background:rgb(${c})"></i>${d==null?'—':cm(d)}</span></div>`; }).join('');
     document.querySelectorAll('.rec').forEach(el=>el.onclick=()=>{ map.fitBounds(recinti[+el.dataset.i].layer.getBounds(),{padding:[30,30]}); $('map').scrollIntoView({behavior:'smooth',block:'center'}); });
-    if(sonda) sonda.setPopupContent(testoPunto());
+    if(sonda){ sonda.setPopupContent(testoPunto()); posiziona(); }
   }
   function tabellaBasse(){
     const bb=MINS.slice(0,3); if(!bb.length){ $('basse').textContent='previsione non disponibile'; return; }
@@ -207,8 +209,22 @@ th b{color:var(--fg);font-weight:600}
     return h+`<div style="color:#98a2b3;font-size:11px;margin-top:6px">fondo ${fmtM(z)} · ±${prec} cm</div></div>`;
   }
   function punto(ll){ sondaLL=ll; if(sonda) map.removeLayer(sonda);
-    sonda=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#c9a24a',fillOpacity:1}).addTo(map).bindPopup(testoPunto(),{maxWidth:280,autoPan:true}).openPopup();
-    sonda.on('popupclose',()=>{ if(sonda){ map.removeLayer(sonda); sonda=null; } }); }
+    sonda=L.circleMarker(ll,{radius:7,color:'#fff',weight:2,fillColor:'#c9a24a',fillOpacity:1}).addTo(map).bindPopup(testoPunto(),{maxWidth:260,autoPan:false}).openPopup();
+    sonda.on('popupclose',()=>{ if(sonda){ map.removeLayer(sonda); sonda=null; } });
+    posiziona(); }
+  /* la finestrella si apre sopra il punto; se lì non ci sta va sotto, se non ci sta neanche sotto va di lato.
+     La mappa non può scorrere (è bloccata sui recinti), quindi è la finestrella a spostarsi. */
+  function posiziona(){
+    const pop=sonda&&sonda.getPopup(); if(!pop||!pop.isOpen()) return;
+    const el=pop.getElement(); el.classList.remove('libera'); pop.options.offset=L.point(0,7); pop.update();
+    const box=el.querySelector('.leaflet-popup-content-wrapper'), w=box.offsetWidth, h=box.offsetHeight;
+    const S=map.getSize(), p=map.latLngToContainerPoint(sondaLL), M=4, G=14;
+    let bx=p.x-w/2, by=p.y-13-h, sopra=true;
+    if(by<M){ sopra=false; by=p.y+G; if(by+h>S.y-M){ by=p.y-h/2; bx= p.x<S.x/2 ? p.x+G : p.x-G-w; } }
+    const bx0=bx; bx=Math.max(M,Math.min(S.x-M-w,bx)); by=Math.max(M,Math.min(S.y-M-h,by));
+    if(sopra && bx===bx0) return;   // posizione normale, con la punta verso il punto
+    el.classList.add('libera'); pop.options.offset=L.point(bx+w/2-p.x, by+h-p.y); pop.update();
+  }
 
   /* ---- comandi ---- */
   $('ora').oninput=disegna;
